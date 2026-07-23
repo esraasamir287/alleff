@@ -9,7 +9,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
-const ALLOWED_GRADES = ['second'];
+const ALLOWED_GRADES = ['first', 'second', 'third'];
 const ALLOWED_STUDY_SYSTEMS = ['arabic', 'languages'];
 const ALLOWED_GOVERNORATES = [
   'القاهرة', 'الجيزة', 'الإسكندرية', 'الدقهلية', 'البحر الأحمر', 'البحيرة',
