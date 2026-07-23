@@ -17,7 +17,6 @@ import { QuizIntroPage } from './pages/QuizIntroPage';
 import { QuizPage } from './pages/QuizPage';
 import { QuizReviewPage } from './pages/QuizReviewPage';
 import { QuizResultPage } from './pages/QuizResultPage';
-import { SubscriptionPage } from './pages/SubscriptionPage';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
@@ -86,14 +85,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <QuizResultPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/subscribe"
-            element={
-              <ProtectedRoute>
-                <SubscriptionPage />
               </ProtectedRoute>
             }
           />
