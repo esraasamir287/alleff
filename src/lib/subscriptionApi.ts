@@ -6,7 +6,7 @@ export type StudySystemValue = 'arabic' | 'languages';
 
 export interface Subscription {
   id: string;
-  userId: string;
+  userId: string | null;
   fullName: string;
   email: string;
   phone: string;
@@ -30,6 +30,30 @@ export interface SubscriberProfile {
   phone: string;
   studySystem: StudySystemValue | null;
 }
+
+export interface PublicSubscriptionPayload {
+  fullName: string;
+  email: string;
+  phone: string;
+  studySystem?: StudySystemValue | null;
+  wantsOnline: boolean;
+  classDay: ClassDay | null;
+}
+
+export interface PublicSubscriptionResult {
+  success: boolean;
+  message: string;
+  fieldErrors?: {
+    fullName?: string;
+    email?: string;
+    phone?: string;
+    studySystem?: string;
+    classDay?: string;
+  };
+}
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 function rowToSubscription(data: Record<string, unknown>): Subscription {
   return {
@@ -94,4 +118,36 @@ export async function saveSubscription(
   if (error) throw error;
   if (!data) throw new Error('SAVE_FAILED');
   return rowToSubscription(data as Record<string, unknown>);
+}
+
+export async function submitPublicSubscription(
+  payload: PublicSubscriptionPayload,
+): Promise<PublicSubscriptionResult> {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/subscription-submit`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      apikey: SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  let data: unknown = null;
+  try {
+    data = await response.json();
+  } catch {
+    /* malformed body */
+  }
+
+  if (!response.ok) {
+    const err = data as { message?: string; errors?: PublicSubscriptionResult['fieldErrors'] };
+    return {
+      success: false,
+      message: err?.message ?? 'تعذر حفظ اختيارك حاليًا. يرجى المحاولة مرة أخرى.',
+      fieldErrors: err?.errors,
+    };
+  }
+
+  return data as PublicSubscriptionResult;
 }
