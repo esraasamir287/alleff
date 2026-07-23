@@ -10,6 +10,8 @@ export interface Booking {
   email: string;
   phone: string;
   studySystem: string | null;
+  academicGrade: string | null;
+  governorate: string | null;
   wantsOnline: boolean;
   classDay: string | null;
   classTime: ClassTime | null;
@@ -31,6 +33,8 @@ function rowToBooking(data: Record<string, unknown>): Booking {
     email: data.email as string,
     phone: data.phone as string,
     studySystem: (data.study_system as string | null) ?? null,
+    academicGrade: (data.academic_grade as string | null) ?? null,
+    governorate: (data.governorate as string | null) ?? null,
     wantsOnline: data.wants_online as boolean,
     classDay: (data.class_day as string | null) ?? null,
     classTime: (data.class_time as ClassTime | null) ?? null,
@@ -46,7 +50,7 @@ export async function fetchBooking(
   const { data, error } = await supabase
     .from('subscriptions')
     .select(
-      'id, user_id, full_name, email, phone, study_system, wants_online, class_day, class_time, subscription_status, created_at, updated_at',
+      'id, user_id, full_name, email, phone, study_system, academic_grade, governorate, wants_online, class_day, class_time, subscription_status, created_at, updated_at',
     )
     .eq('user_id', userId)
     .maybeSingle();
@@ -63,6 +67,8 @@ export async function saveBooking(
     email: string;
     phone: string;
     studySystem: string | null;
+    academicGrade: string | null;
+    governorate: string | null;
   },
   choice: BookingChoice,
 ): Promise<Booking> {
@@ -75,6 +81,8 @@ export async function saveBooking(
     email: profile.email,
     phone: profile.phone,
     study_system: profile.studySystem,
+    academic_grade: profile.academicGrade,
+    governorate: profile.governorate,
     wants_online: wantsOnline,
     class_day: wantsOnline ? 'thursday' : null,
     class_time: wantsOnline ? choice.classTime : null,
@@ -87,7 +95,7 @@ export async function saveBooking(
     .from('subscriptions')
     .upsert(payload, { onConflict: 'user_id' })
     .select(
-      'id, user_id, full_name, email, phone, study_system, wants_online, class_day, class_time, subscription_status, created_at, updated_at',
+      'id, user_id, full_name, email, phone, study_system, academic_grade, governorate, wants_online, class_day, class_time, subscription_status, created_at, updated_at',
     )
     .maybeSingle();
 

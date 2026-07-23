@@ -138,6 +138,8 @@ export function BookingPage() {
           email: profile?.email ?? user!.email ?? '',
           phone: profile?.phone ?? '',
           studySystem: profile?.studySystem ?? null,
+          academicGrade: profile?.academicGrade ?? null,
+          governorate: profile?.governorate ?? null,
         },
         choice,
       );
