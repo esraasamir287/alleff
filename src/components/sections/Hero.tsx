@@ -1,4 +1,4 @@
-import { LogIn, UserPlus, Sparkles, GraduationCap } from 'lucide-react';
+import { LogIn, UserPlus, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { WhatsAppButton } from '../ui/WhatsAppButton';
@@ -32,26 +32,28 @@ export function Hero() {
             خطوة بخطوة، بشرح مبسّط وأسلوب عملي يهيّئك للامتحان بثقة.
           </p>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Button as="link" to="/subscribe" variant="primary" size="lg">
-              <GraduationCap className="h-5 w-5" aria-hidden="true" />
-              اشترك الآن في الكورس
-            </Button>
-            <WhatsAppButton variant="secondary" size="lg" />
-          </div>
-
           {showAuthCtas && (
-            <div className="flex items-center gap-4 pt-2 text-sm font-bold text-primary/70">
-              <Link to="/login" className="inline-flex items-center gap-1.5 transition-colors hover:text-primary">
-                <LogIn className="h-4 w-4" aria-hidden="true" />
-                تسجيل الدخول
-              </Link>
-              <span className="h-4 w-px bg-primary/20" />
-              <Link to="/signup" className="inline-flex items-center gap-1.5 transition-colors hover:text-primary">
-                <UserPlus className="h-4 w-4" aria-hidden="true" />
-                إنشاء حساب
-              </Link>
-            </div>
+            <>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button as="link" to="/signup" variant="primary" size="lg">
+                  <UserPlus className="h-5 w-5" aria-hidden="true" />
+                  ابدأ رحلتك التعليمية
+                </Button>
+                <WhatsAppButton variant="secondary" size="lg" />
+              </div>
+
+              <div className="flex items-center gap-4 pt-2 text-sm font-bold text-primary/70">
+                <Link to="/login" className="inline-flex items-center gap-1.5 transition-colors hover:text-primary">
+                  <LogIn className="h-4 w-4" aria-hidden="true" />
+                  تسجيل الدخول
+                </Link>
+                <span className="h-4 w-px bg-primary/20" />
+                <Link to="/signup" className="inline-flex items-center gap-1.5 transition-colors hover:text-primary">
+                  <UserPlus className="h-4 w-4" aria-hidden="true" />
+                  إنشاء حساب
+                </Link>
+              </div>
+            </>
           )}
         </div>
 
