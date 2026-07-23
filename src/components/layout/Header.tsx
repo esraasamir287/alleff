@@ -43,7 +43,7 @@ export function Header() {
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         {/* Logo */}
         <a href="#home" className="flex items-center" aria-label="الصفحة الرئيسية">
-          <img src="/image%20copy%20copy.png" alt="Allef" className="h-[52px] w-[52px] object-contain" />
+          <img src="https://res.cloudinary.com/vnvyddkj/image/upload/f_auto,q_auto/ChatGPT_Image_Jul_23_2026_09_43_25_PM_ldlbhg" alt="Allef" className="h-[52px] w-[52px] object-contain" />
         </a>
 
         {/* Desktop nav */}
