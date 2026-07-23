@@ -7,7 +7,7 @@ export function Instructor() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           {/* Photo placeholder */}
-          <img src="https://res.cloudinary.com/vnvyddkj/image/upload/v1784835868/ChatGPT_Image_Jul_14_2026_09_09_02_PM_ap3w3b.png" alt="Allef" className="h-[52px] w-[52px] object-contain" />
+          
       
           <div className="order-first flex justify-center lg:order-last">
             <div className="relative">
@@ -15,7 +15,9 @@ export function Instructor() {
               <div className="relative flex h-72 w-72 items-center justify-center rounded-5xl border-2 border-dashed border-secondary-300 bg-white sm:h-80 sm:w-80">
                 <div className="flex flex-col items-center gap-3 text-secondary-400">
                   <UserCircle className="h-24 w-24" strokeWidth={1} aria-hidden="true" />
-                  <span className="text-sm font-bold text-secondary-400">صورة المدرّسة</span>
+                  <span className="text-sm font-bold text-secondary-400">
+                    <img src="https://res.cloudinary.com/vnvyddkj/image/upload/v1784835868/ChatGPT_Image_Jul_14_2026_09_09_02_PM_ap3w3b.png" alt="Allef" className="h-[52px] w-[52px] object-contain" />
+                  </span>
                 </div>
               </div>
             </div>
