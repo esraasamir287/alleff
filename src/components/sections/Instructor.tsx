@@ -12,7 +12,7 @@ export function Instructor() {
               <div className="absolute -inset-3 rounded-5xl brand-gradient opacity-20 blur-2xl" />
               <div className="relative flex h-72 w-72 items-center justify-center rounded-5xl border-2 border-dashed border-secondary-300 bg-white sm:h-80 sm:w-80">
                 <img src="https://res.cloudinary.com/vnvyddkj/image/upload/v1784836550/ChatGPT_Image_Jul_23_2026_10_55_17_PM_au3vts.png" alt="Allef" className="object-contain" />
-        </a>
+        
               
             </div>
           </div>
