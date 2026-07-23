@@ -1,4 +1,4 @@
-import { LogIn, UserPlus, Sparkles } from 'lucide-react';
+import { LogIn, UserPlus, Sparkles, CalendarCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { WhatsAppButton } from '../ui/WhatsAppButton';
@@ -8,6 +8,7 @@ import { useAuth } from '../../context/useAuth';
 export function Hero() {
   const { user, loading } = useAuth();
   const showAuthCtas = !loading && !user;
+  const showSubscription = !loading && !!user;
 
   return (
     <section id="home" className="relative overflow-hidden bg-soft pt-28 pb-16 sm:pt-32 lg:pt-36 lg:pb-24">
@@ -54,6 +55,16 @@ export function Hero() {
                 </Link>
               </div>
             </>
+          )}
+
+          {showSubscription && (
+            <div className="flex flex-wrap items-center gap-3">
+              <Button as="link" to="/booking" variant="primary" size="lg">
+                <CalendarCheck className="h-5 w-5" aria-hidden="true" />
+                الاشتراك
+              </Button>
+              <WhatsAppButton variant="secondary" size="lg" />
+            </div>
           )}
         </div>
 
