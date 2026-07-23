@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus, Loader2 } from 'lucide-react';
 import { AuthLayout } from '../components/auth/AuthLayout';
@@ -25,6 +25,7 @@ import {
 import { authMessages } from '../data/authConstants';
 import { gradeOptions } from '../data/gradeOptions';
 import { signUp } from '../lib/authApi';
+import { useAuth } from '../context/useAuth';
 
 interface Errors {
   fullName?: string;
@@ -55,6 +56,13 @@ export function SignUpPage() {
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | undefined>();
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  // Redirect already-authenticated users away from signup (no flicker).
+  useEffect(() => {
+    if (loading) return;
+    if (user) navigate('/', { replace: true });
+  }, [user, loading, navigate]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -92,7 +100,7 @@ export function SignUpPage() {
 
     if (result.success) {
       setSuccess(true);
-      setTimeout(() => navigate('/login'), 1500);
+      setTimeout(() => navigate('/'), 1500);
     } else {
       const backendErrors = result.fieldErrors ?? {};
       const merged: Errors = {
@@ -136,7 +144,7 @@ export function SignUpPage() {
           }
         >
           {success ? (
-            <AuthSuccessNotice message="تم إنشاء حسابك بنجاح، يمكنك الآن تسجيل الدخول." />
+            <AuthSuccessNotice message="تم إنشاء حسابك بنجاح. جارٍ تحويلك..." />
           ) : (
             <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
               <FormInput

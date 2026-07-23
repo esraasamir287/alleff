@@ -54,6 +54,16 @@ export interface AuthResult {
 }
 
 export interface SessionResult extends AuthResult {
+  data?: {
+    user?: AuthUser;
+    session?: {
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+      expiresAt: number;
+      rememberMe?: boolean;
+    } | null;
+  };
   needsSessionSet?: boolean;
   accessToken?: string;
   refreshToken?: string;
@@ -94,8 +104,25 @@ async function callEdgeFunction<T>(slug: string, payload: unknown): Promise<T> {
   return data as T;
 }
 
-export async function signUp(payload: SignupPayload): Promise<AuthResult> {
-  return callEdgeFunction<AuthResult>('auth-signup', payload);
+export async function signUp(payload: SignupPayload): Promise<SessionResult> {
+  const result = await callEdgeFunction<SessionResult>('auth-signup', payload);
+
+  const sessionTokens = result.data?.session;
+  if (result.success && sessionTokens?.accessToken && sessionTokens?.refreshToken) {
+    setRememberMe(true);
+    const { error } = await supabase.auth.setSession({
+      access_token: sessionTokens.accessToken,
+      refresh_token: sessionTokens.refreshToken,
+    });
+    if (error) {
+      return {
+        success: false,
+        message: 'تم إنشاء حسابك ولكن حدث خطأ أثناء حفظ الجلسة. يرجى تسجيل الدخول.',
+      };
+    }
+  }
+
+  return result;
 }
 
 export async function login(payload: LoginPayload): Promise<SessionResult> {

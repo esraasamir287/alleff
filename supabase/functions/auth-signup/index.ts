@@ -129,9 +129,9 @@ function errorResponse(status: number, message: string, fieldErrors: FieldErrors
   );
 }
 
-function successResponse(message: string, user: unknown): Response {
+function successResponse(message: string, user: unknown, session: unknown): Response {
   return new Response(
-    JSON.stringify({ success: true, message, data: { user } }),
+    JSON.stringify({ success: true, message, data: { user, session } }),
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
   );
 }
@@ -224,10 +224,31 @@ Deno.serve(async (req: Request) => {
     return errorResponse(500, 'حدث خطأ غير متوقع أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى.');
   }
 
-  // Confirm the user can sign in immediately (email_confirm already true above)
-  void anonKey; // referenced to keep the anon key available for future use
+  // Sign in the newly created user and return session tokens so the frontend
+  // can establish a session immediately — no separate login step needed.
+  const authClient: SupabaseClient = createClient(supabaseUrl, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 
-  return successResponse('تم إنشاء حسابك بنجاح، يمكنك الآن تسجيل الدخول.', {
+  const { data: sessionData, error: sessionError } = await authClient.auth.signInWithPassword({
+    email: normalizedEmail,
+    password: body.password!,
+  });
+
+  if (sessionError || !sessionData.session) {
+    // Account was created but auto-login failed — user can log in manually.
+    return successResponse('تم إنشاء حسابك بنجاح، يرجى تسجيل الدخول.', {
+      id: userId,
+      fullName: trimmedFullName,
+      phone: normalizedPhone,
+      email: normalizedEmail,
+      academicGrade: body.academicGrade,
+      governorate: body.governorate,
+      studySystem: body.studySystem,
+    }, null);
+  }
+
+  return successResponse('تم إنشاء حسابك بنجاح.', {
     id: userId,
     fullName: trimmedFullName,
     phone: normalizedPhone,
@@ -235,5 +256,10 @@ Deno.serve(async (req: Request) => {
     academicGrade: body.academicGrade,
     governorate: body.governorate,
     studySystem: body.studySystem,
+  }, {
+    accessToken: sessionData.session.access_token,
+    refreshToken: sessionData.session.refresh_token,
+    expiresIn: sessionData.session.expires_in,
+    expiresAt: sessionData.session.expires_at,
   });
 });
