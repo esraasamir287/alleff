@@ -8,7 +8,7 @@ export function Instructor() {
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           {/* Photo placeholder */}
           <img src="https://res.cloudinary.com/vnvyddkj/image/upload/v1784835868/ChatGPT_Image_Jul_14_2026_09_09_02_PM_ap3w3b.png" alt="Allef" className="h-[52px] w-[52px] object-contain" />
-        </a>
+      
           <div className="order-first flex justify-center lg:order-last">
             <div className="relative">
               <div className="absolute -inset-3 rounded-5xl brand-gradient opacity-20 blur-2xl" />
