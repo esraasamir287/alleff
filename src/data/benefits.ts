@@ -27,8 +27,8 @@ export const benefits: Benefit[] = [
   {
     icon: ClipboardCheck,
     title: 'تدريبات واختبارات مستقبلًا',
-    description: 'ستتوفر لاحقًا تدريبات واختبارات تساعد الطالب على قياس فهمه وتطبيق ما تعلّمه.',
-    isFuture: true,
+    description: 'متوفر بالفعل تدريبات واختبارات تساعد الطالب على قياس فهمه وتطبيق ما تعلّمه.',
+    
   },
   {
     icon: LineChart,
