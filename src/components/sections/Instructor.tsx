@@ -15,6 +15,7 @@ export function Instructor() {
         
               
             </div>
+            </div>
           </div>
 
           {/* Text */}
