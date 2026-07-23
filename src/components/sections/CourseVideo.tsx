@@ -17,9 +17,12 @@ export function CourseVideo() {
               <div className="relative aspect-video w-full bg-primary">
                 <iframe
                   className="absolute inset-0 h-full w-full"
-                  src="https://www.youtube.com/embed/VNcpZSEvs3o"
+                  src="https://www.youtube-nocookie.com/embed/VNcpZSEvs3o"
+                  width="100%"
+                  height="100%"
                   title="الكورس التأسيسي - الدرس الأول"
                   loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                 />
