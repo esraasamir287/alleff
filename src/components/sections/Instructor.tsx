@@ -14,10 +14,8 @@ export function Instructor() {
               <div className="absolute -inset-3 rounded-5xl brand-gradient opacity-20 blur-2xl" />
               <div className="relative flex h-72 w-72 items-center justify-center rounded-5xl border-2 border-dashed border-secondary-300 bg-white sm:h-80 sm:w-80">
                 <div className="flex flex-col items-center gap-3 text-secondary-400">
-                  <UserCircle className="h-24 w-24" strokeWidth={1} aria-hidden="true" />
-                  <span className="text-sm font-bold text-secondary-400">
-                    <img src="https://res.cloudinary.com/vnvyddkj/image/upload/v1784835868/ChatGPT_Image_Jul_14_2026_09_09_02_PM_ap3w3b.png" alt="Allef" className="h-[52px] w-[52px] object-contain" />
-                  </span>
+                  <img src="https://res.cloudinary.com/vnvyddkj/image/upload/v1784835868/ChatGPT_Image_Jul_14_2026_09_09_02_PM_ap3w3b.png" alt="Allef" className="h-[52px] w-[52px] object-contain" />
+                  <span className="text-sm font-bold text-secondary-400">صورة المدرّسة</span>
                 </div>
               </div>
             </div>
