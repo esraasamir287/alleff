@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 183 264" fill="none">
+  <defs>
+    <linearGradient id="ag" x1="160" y1="0" x2="20" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stopColor="#7C3AED"/>
+      <stop offset="55%" stopColor="#5B21B6"/>
+      <stop offset="100%" stopColor="#3B0DAD"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Diagonal stroke -->
+  <polygon points="48,2 115,2 82,196 15,218" fill="url(#ag)"/>
+
+  <!-- Right vertical stroke -->
+  <polygon points="112,0 165,0 176,210 122,210" fill="url(#ag)"/>
+
+  <!-- Dark depth edge on right side of right stroke -->
+  <polygon points="158,0 165,0 176,210 169,210" fill="#1A0860" opacity="0.45"/>
+
+  <!-- Yellow accent shard at the junction of the two strokes -->
+  <polygon points="111,2 122,0 116,42 105,44" fill="#F7B731"/>
+
+  <!-- Pixel scatter — emanating from the bottom of the diagonal stroke -->
+  <!-- Row A: nearest to stroke end, largest -->
+  <rect x="62" y="200" width="8" height="8" rx="1" fill="#6D28D9" opacity="0.85"/>
+  <rect x="50" y="206" width="8" height="8" rx="1" fill="#7C3AED" opacity="0.80"/>
+  <rect x="72" y="207" width="6" height="6" rx="1" fill="#5B21B6" opacity="0.70"/>
+  <rect x="80" y="205" width="5" height="5" rx="1" fill="#F7B731" opacity="0.85"/>
+
+  <!-- Row B -->
+  <rect x="38" y="212" width="8" height="8" rx="1" fill="#5B21B6" opacity="0.80"/>
+  <rect x="52" y="215" width="7" height="7" rx="1" fill="#6D28D9" opacity="0.70"/>
+  <rect x="64" y="217" width="6" height="6" rx="1" fill="#7C3AED" opacity="0.60"/>
+  <rect x="75" y="218" width="5" height="5" rx="1" fill="#5B21B6" opacity="0.50"/>
+
+  <!-- Row C -->
+  <rect x="25" y="220" width="8" height="8" rx="1" fill="#6D28D9" opacity="0.70"/>
+  <rect x="37" y="223" width="7" height="7" rx="1" fill="#5B21B6" opacity="0.60"/>
+  <rect x="49" y="225" width="6" height="6" rx="1" fill="#7C3AED" opacity="0.50"/>
+  <rect x="60" y="227" width="5" height="5" rx="1" fill="#6D28D9" opacity="0.40"/>
+  <rect x="70" y="228" width="4" height="4" rx="1" fill="#5B21B6" opacity="0.30"/>
+
+  <!-- Row D -->
+  <rect x="12" y="230" width="7" height="7" rx="1" fill="#5B21B6" opacity="0.55"/>
+  <rect x="23" y="233" width="6" height="6" rx="1" fill="#7C3AED" opacity="0.45"/>
+  <rect x="34" y="235" width="5" height="5" rx="1" fill="#6D28D9" opacity="0.35"/>
+  <rect x="44" y="237" width="4" height="4" rx="1" fill="#5B21B6" opacity="0.25"/>
+  <rect x="53" y="238" width="3" height="3" rx="0.5" fill="#7C3AED" opacity="0.18"/>
+
+  <!-- Row E: outermost, smallest, most transparent -->
+  <rect x="4" y="240" width="6" height="6" rx="1" fill="#6D28D9" opacity="0.40"/>
+  <rect x="14" y="243" width="5" height="5" rx="1" fill="#5B21B6" opacity="0.30"/>
+  <rect x="24" y="245" width="4" height="4" rx="1" fill="#7C3AED" opacity="0.22"/>
+  <rect x="33" y="247" width="3" height="3" rx="0.5" fill="#6D28D9" opacity="0.15"/>
+
+  <!-- Trailing wisps -->
+  <rect x="2" y="252" width="4" height="4" rx="1" fill="#5B21B6" opacity="0.22"/>
+  <rect x="10" y="254" width="3" height="3" rx="0.5" fill="#7C3AED" opacity="0.16"/>
+  <rect x="18" y="256" width="2" height="2" rx="0.5" fill="#6D28D9" opacity="0.10"/>
+</svg>
