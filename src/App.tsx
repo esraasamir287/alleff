@@ -5,6 +5,7 @@ import { Hero } from './components/sections/Hero';
 import { About } from './components/sections/About';
 import { Benefits } from './components/sections/Benefits';
 import { HowItWorks } from './components/sections/HowItWorks';
+import { CourseVideo } from './components/sections/CourseVideo';
 import { Instructor } from './components/sections/Instructor';
 import { FAQ } from './components/sections/FAQ';
 import { FinalCTA } from './components/sections/FinalCTA';
@@ -30,6 +31,7 @@ function LandingPage() {
         <About />
         <Benefits />
         <HowItWorks />
+        <CourseVideo />
         <Instructor />
         <FAQ />
         <FinalCTA />
