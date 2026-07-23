@@ -17,6 +17,7 @@ import { QuizIntroPage } from './pages/QuizIntroPage';
 import { QuizPage } from './pages/QuizPage';
 import { QuizReviewPage } from './pages/QuizReviewPage';
 import { QuizResultPage } from './pages/QuizResultPage';
+import { BookingPage } from './pages/BookingPage';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
@@ -61,6 +62,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <QuizIntroPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/booking"
+            element={
+              <ProtectedRoute>
+                <BookingPage />
               </ProtectedRoute>
             }
           />

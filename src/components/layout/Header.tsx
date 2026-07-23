@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, ClipboardList } from 'lucide-react';
+import { Menu, X, LogOut, ClipboardList, CalendarCheck } from 'lucide-react';
 import { navItems } from '../../data/navItems';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../context/useAuth';
@@ -71,6 +71,10 @@ export function Header() {
                 <ClipboardList className="h-4 w-4" aria-hidden="true" />
                 الامتحان
               </Button>
+              <Button as="link" to="/booking" variant="ghost" size="sm">
+                <CalendarCheck className="h-4 w-4" aria-hidden="true" />
+                حجز الكورس
+              </Button>
               <Button type="button" variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4" aria-hidden="true" />
                 تسجيل الخروج
@@ -130,6 +134,10 @@ export function Header() {
                   <Button as="link" to="/quiz" variant="ghost" size="md" onClick={() => setOpen(false)}>
                     <ClipboardList className="h-4 w-4" aria-hidden="true" />
                     الامتحان
+                  </Button>
+                  <Button as="link" to="/booking" variant="ghost" size="md" onClick={() => setOpen(false)}>
+                    <CalendarCheck className="h-4 w-4" aria-hidden="true" />
+                    حجز الكورس
                   </Button>
                   <Button type="button" variant="outline" size="md" onClick={handleLogout}>
                     <LogOut className="h-4 w-4" aria-hidden="true" />
