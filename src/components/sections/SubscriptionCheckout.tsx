@@ -9,14 +9,20 @@ import {
   GraduationCap,
   ImagePlus,
   Landmark,
+  Loader2,
   MessageCircle,
   UploadCloud,
   X,
 } from 'lucide-react';
 import type { Plan } from './Pricing';
+import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/useAuth';
 
-const TRANSFER_NUMBER = '01025123193';
+const INSTAPAY_NUMBER = '01025123193';
+const VODAFONE_NUMBER = '01025123193';
 const WHATSAPP_NUMBER = '201025123193';
+
+type PaymentMethod = 'instapay' | 'vodafone_cash';
 
 interface SubscriptionCheckoutProps {
   plan: Plan;
@@ -24,9 +30,15 @@ interface SubscriptionCheckoutProps {
 }
 
 export function SubscriptionCheckout({ plan, onClose }: SubscriptionCheckoutProps) {
+  const { user } = useAuth();
   const [studentName, setStudentName] = useState('');
-  const [fileName, setFileName] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('instapay');
+  const [uploading, setUploading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   const planName = `الصف ${plan.grade} ${plan.system} - ${plan.period}`;
   const whatsappMessage = `السلام عليكم، تم التحويل للاشتراك في باقة ${planName} بقيمة ${plan.price} جنيه. الاسم: ${studentName || '[اسم الطالب]'}`;
   const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(whatsappMessage)}`;
@@ -40,11 +52,55 @@ export function SubscriptionCheckout({ plan, onClose }: SubscriptionCheckoutProp
   }, []);
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    setFileName(event.target.files?.[0]?.name ?? '');
+    setSelectedFile(event.target.files?.[0] ?? null);
+    setSubmitError(null);
   }
 
-  function copyNumber() {
-    void navigator.clipboard?.writeText(TRANSFER_NUMBER);
+  function copyNumber(value: string) {
+    void navigator.clipboard?.writeText(value);
+  }
+
+  async function handleUpload() {
+    if (!user) {
+      setSubmitError('يجب تسجيل الدخول أولًا لرفع إيصال الدفع.');
+      return;
+    }
+    if (!selectedFile) {
+      setSubmitError('يرجى اختيار صورة الإيصال أولًا.');
+      return;
+    }
+
+    setUploading(true);
+    setSubmitError(null);
+    try {
+      const ext = selectedFile.name.split('.').pop() || 'png';
+      const filePath = `${user.id}/${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('payment-receipts')
+        .upload(filePath, selectedFile, { contentType: selectedFile.type, upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { error: insertError } = await supabase.from('subscription_requests').insert({
+        user_id: user.id,
+        package_name: planName,
+        price: plan.price,
+        payment_method: paymentMethod,
+        receipt_path: filePath,
+        status: 'pending',
+        student_name: studentName || null,
+      });
+
+      if (insertError) throw insertError;
+
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError('تعذّر رفع الإيصال وحفظ الطلب. حاول مرة أخرى.');
+      console.error(err);
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
@@ -68,13 +124,13 @@ export function SubscriptionCheckout({ plan, onClose }: SubscriptionCheckoutProp
           <X className="h-5 w-5" aria-hidden="true" />
         </button>
 
-        <header className="mx-auto max-w-2xl px-8 text-center text-white">
+        <header className="mx-auto max-w-2xl px-8 text-center">
           <div className="flex items-center justify-center gap-3 text-[#c7a5ff]">
             <span className="h-px w-10 bg-[#8f62eb]" />
             <span className="text-xl">✦</span>
             <span className="h-px w-10 bg-[#8f62eb]" />
           </div>
-          <h1 id="checkout-title" className="mt-1 text-3xl font-black sm:text-5xl">إتمام الاشتراك</h1>
+          <h1 id="checkout-title" className="mt-1 text-3xl font-black text-white sm:text-5xl">إتمام الاشتراك</h1>
           <p className="mt-2 text-sm text-white/75 sm:text-base">راجع تفاصيل الباقة وأكمل التحويل ثم ارفع إثبات الدفع</p>
         </header>
 
@@ -123,10 +179,24 @@ export function SubscriptionCheckout({ plan, onClose }: SubscriptionCheckoutProp
                 {plan.price} جنيه
               </span>
             </div>
-            <p className="mt-2 text-sm text-white/70">المبلغ المطلوب تحويله:</p>
+            <p className="mt-2 text-sm text-white/70">اختر وسيلة الدفع وحوّل المبلغ:</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <PaymentCard label="InstaPay" number={TRANSFER_NUMBER} onCopy={copyNumber} />
-              <PaymentCard label="Vodafone Cash" number={TRANSFER_NUMBER} onCopy={copyNumber} />
+              <PaymentCard
+                method="instapay"
+                label="InstaPay"
+                number={INSTAPAY_NUMBER}
+                selected={paymentMethod === 'instapay'}
+                onSelect={() => setPaymentMethod('instapay')}
+                onCopy={() => copyNumber(INSTAPAY_NUMBER)}
+              />
+              <PaymentCard
+                method="vodafone_cash"
+                label="Vodafone Cash"
+                number={VODAFONE_NUMBER}
+                selected={paymentMethod === 'vodafone_cash'}
+                onSelect={() => setPaymentMethod('vodafone_cash')}
+                onCopy={() => copyNumber(VODAFONE_NUMBER)}
+              />
             </div>
             <div className="mt-4 rounded-xl border border-[#6f4ad5]/40 bg-white/[0.06] px-4 py-3 text-center text-xs leading-relaxed text-white/80">
               بعد التحويل احتفظ بصورة الإيصال لنتمكن من رفعها وإثبات الدفع.
@@ -141,19 +211,55 @@ export function SubscriptionCheckout({ plan, onClose }: SubscriptionCheckoutProp
               </h2>
               <p className="mt-1 text-xs text-white/70">قم بتحميل صورة واضحة من شاشة التحويل (Screenshot)</p>
               <input ref={fileInputRef} type="file" accept="image/png,image/jpeg" onChange={handleFileChange} className="sr-only" />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#b17fff] bg-[#5c25cf] px-4 py-3 text-sm font-extrabold text-white shadow-lg transition hover:bg-[#6c32df] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d3b8ff]"
-              >
-                <ImagePlus className="h-5 w-5" aria-hidden="true" />
-                {fileName || 'رفع صورة التحويل'}
-              </button>
-              <p className="mt-2 text-center text-xs text-white/60">PNG, JPG حتى 10MB</p>
+
+              {submitted ? (
+                <div className="mt-4 flex flex-col items-center gap-2 rounded-xl border border-[#22e879]/40 bg-[#16a34a]/15 px-4 py-5 text-center">
+                  <Check className="h-8 w-8 text-[#22e879]" aria-hidden="true" />
+                  <p className="text-sm font-bold text-white">تم رفع الإيصال وحفظ طلبك بنجاح</p>
+                  <p className="text-xs text-white/70">سيتم مراجعة الطلب وتفعيل اشتراكك خلال 24 ساعة عمل.</p>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#b17fff] bg-[#5c25cf] px-4 py-3 text-sm font-extrabold text-white shadow-lg transition hover:bg-[#6c32df] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d3b8ff]"
+                  >
+                    <ImagePlus className="h-5 w-5" aria-hidden="true" />
+                    {selectedFile ? selectedFile.name : 'رفع صورة التحويل'}
+                  </button>
+                  <p className="mt-2 text-center text-xs text-white/60">PNG, JPG حتى 10MB</p>
+
+                  {submitError && (
+                    <p className="mt-3 rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-center text-xs font-bold text-red-200">
+                      {submitError}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleUpload}
+                    disabled={uploading || !selectedFile}
+                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#5c25cf] px-4 py-3 text-sm font-black text-white shadow-lg transition hover:bg-[#6c32df] disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d3b8ff]"
+                  >
+                    {uploading ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                        جارٍ الرفع...
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="h-5 w-5" aria-hidden="true" />
+                        حفظ الإيصال
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
             </section>
 
             <section className="rounded-[1.35rem] border border-[#6f4ad5]/45 bg-[#100d48]/90 p-4 text-white sm:p-5">
-              <h2 className="flex items-center gap-2 text-xl font-black">
+              <h2 className="flex items-center gap-2 text-xl font-black text-white">
                 <MessageCircle className="h-6 w-6 text-[#22e879]" aria-hidden="true" />
                 إرسال التأكيد عبر واتساب
               </h2>
@@ -211,21 +317,69 @@ function SummaryItem({ icon, label, value }: { icon: React.ReactNode; label: str
   );
 }
 
-function PaymentCard({ label, number, onCopy }: { label: string; number: string; onCopy: () => void }) {
+function PaymentCard({
+  method,
+  label,
+  number,
+  selected,
+  onSelect,
+  onCopy,
+}: {
+  method: PaymentMethod;
+  label: string;
+  number: string;
+  selected: boolean;
+  onSelect: () => void;
+  onCopy: () => void;
+}) {
   return (
-    <div className="rounded-2xl bg-[#f7f6ff] p-4 text-center text-[#171236]">
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`rounded-2xl bg-[#f7f6ff] p-4 text-center text-[#171236] transition ring-offset-2 ring-offset-[#100d48] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b17fff] ${
+        selected ? 'ring-2 ring-[#5c25cf] shadow-lg' : 'ring-0 hover:shadow-md'
+      }`}
+      aria-pressed={selected}
+    >
       <div className="flex items-center justify-center gap-2">
-        <span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-black text-white ${label === 'InstaPay' ? 'bg-[#1e255f]' : 'bg-[#e62727]'}`}>
-          {label === 'InstaPay' ? 'IP' : 'V'}
-        </span>
+        {method === 'instapay' ? <InstaPayLogo /> : <VodafoneCashLogo />}
         <span className="text-base font-black">{label}</span>
       </div>
       <div className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-[#c6b9ed] px-2 py-2.5 text-lg font-black text-[#4e27bd]">
         {number}
-        <button type="button" onClick={onCopy} className="rounded-md p-1 text-[#655b8d] transition hover:bg-[#e9e3ff]" aria-label={`نسخ رقم ${label}`}>
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); onCopy(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); onCopy(); } }}
+          className="rounded-md p-1 text-[#655b8d] transition hover:bg-[#e9e3ff]"
+          aria-label={`نسخ رقم ${label}`}
+        >
           <Copy className="h-4 w-4" aria-hidden="true" />
-        </button>
+        </span>
       </div>
-    </div>
+    </button>
+  );
+}
+
+function InstaPayLogo() {
+  return (
+    <svg viewBox="0 0 48 48" className="h-8 w-8" role="img" aria-label="InstaPay">
+      <rect width="48" height="48" rx="12" fill="#EE2B7A" />
+      <text x="24" y="30" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff" fontFamily="system-ui, sans-serif">IP</text>
+    </svg>
+  );
+}
+
+function VodafoneCashLogo() {
+  return (
+    <svg viewBox="0 0 48 48" className="h-8 w-8" role="img" aria-label="Vodafone Cash">
+      <circle cx="24" cy="24" r="24" fill="#E60000" />
+      <path
+        d="M20.5 16.5c-3.3 0-6 2.9-6 6.5 0 3.8 2.5 7.5 6.2 7.5.8 0 1.6-.2 2.3-.5-2.9-1-4.8-4-4.8-7.2 0-2.2 1-4.2 2.5-5.5-.1-.5-.2-.6-.2-.8z"
+        fill="#fff"
+      />
+      <circle cx="29" cy="22" r="4.5" fill="#fff" />
+    </svg>
   );
 }
