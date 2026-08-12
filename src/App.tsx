@@ -20,6 +20,7 @@ import { QuizPage } from './pages/QuizPage';
 import { QuizReviewPage } from './pages/QuizReviewPage';
 import { QuizResultPage } from './pages/QuizResultPage';
 import { BookingPage } from './pages/BookingPage';
+import { AdminSubscriptionsPage } from './pages/AdminSubscriptionsPage';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
@@ -98,6 +99,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <QuizResultPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/subscriptions"
+            element={
+              <ProtectedRoute requireProfileComplete={false}>
+                <AdminSubscriptionsPage />
               </ProtectedRoute>
             }
           />
