@@ -1,23 +1,29 @@
+import { useState } from 'react';
 import { Check, Globe2, Laptop, MessageCircle, PlaySquare, Sparkles } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { SubscriptionCheckout } from './SubscriptionCheckout';
 
-type Plan = {
+export type Plan = {
   period: '3 أشهر' | 'شهر واحد';
   grade: 'أولى' | 'ثانية';
   system: 'عربي' | 'لغات';
   price: number;
   color: 'violet' | 'blue' | 'green' | 'cyan';
+  features: string[];
 };
 
+const longFeatures = ['شرح 3 أشهر', '12 محاضرة', 'اختبارات وتدريبات', 'متابعة ودعم 3 أشهر'];
+const shortFeatures = ['شرح شهر', '4 محاضرات', 'اختبارات وتدريبات', 'متابعة ودعم شهر'];
+
 const plans: Plan[] = [
-  { period: '3 أشهر', grade: 'أولى', system: 'عربي', price: 350, color: 'violet' },
-  { period: '3 أشهر', grade: 'أولى', system: 'لغات', price: 400, color: 'blue' },
-  { period: '3 أشهر', grade: 'ثانية', system: 'عربي', price: 400, color: 'green' },
-  { period: '3 أشهر', grade: 'ثانية', system: 'لغات', price: 500, color: 'cyan' },
-  { period: 'شهر واحد', grade: 'أولى', system: 'عربي', price: 150, color: 'violet' },
-  { period: 'شهر واحد', grade: 'أولى', system: 'لغات', price: 200, color: 'blue' },
-  { period: 'شهر واحد', grade: 'ثانية', system: 'عربي', price: 150, color: 'green' },
-  { period: 'شهر واحد', grade: 'ثانية', system: 'لغات', price: 200, color: 'cyan' },
+  { period: '3 أشهر', grade: 'أولى', system: 'عربي', price: 350, color: 'violet', features: longFeatures },
+  { period: '3 أشهر', grade: 'أولى', system: 'لغات', price: 400, color: 'blue', features: longFeatures },
+  { period: '3 أشهر', grade: 'ثانية', system: 'عربي', price: 400, color: 'green', features: longFeatures },
+  { period: '3 أشهر', grade: 'ثانية', system: 'لغات', price: 500, color: 'cyan', features: longFeatures },
+  { period: 'شهر واحد', grade: 'أولى', system: 'عربي', price: 150, color: 'violet', features: shortFeatures },
+  { period: 'شهر واحد', grade: 'أولى', system: 'لغات', price: 200, color: 'blue', features: shortFeatures },
+  { period: 'شهر واحد', grade: 'ثانية', system: 'عربي', price: 150, color: 'green', features: shortFeatures },
+  { period: 'شهر واحد', grade: 'ثانية', system: 'لغات', price: 200, color: 'cyan', features: shortFeatures },
 ];
 
 const colorClasses = {
@@ -47,12 +53,8 @@ const colorClasses = {
   },
 };
 
-const longFeatures = ['شرح 3 أشهر', '12 محاضرة', 'اختبارات وتدريبات', 'متابعة ودعم 3 أشهر'];
-const shortFeatures = ['شرح شهر', '4 محاضرات', 'اختبارات وتدريبات', 'متابعة ودعم شهر'];
-
-function PlanCard({ plan }: { plan: Plan }) {
+function PlanCard({ plan, onSelect }: { plan: Plan; onSelect: (plan: Plan) => void }) {
   const colors = colorClasses[plan.color];
-  const features = plan.period === '3 أشهر' ? longFeatures : shortFeatures;
 
   return (
     <article className="relative flex min-h-[420px] flex-col overflow-hidden rounded-[1.35rem] border border-white/70 bg-white px-5 pb-5 pt-12 text-start shadow-[0_16px_36px_rgba(5,3,35,0.22)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_rgba(5,3,35,0.32)]">
@@ -71,7 +73,7 @@ function PlanCard({ plan }: { plan: Plan }) {
       </div>
 
       <ul className="mt-7 flex flex-1 flex-col gap-3 text-sm font-semibold leading-relaxed text-primary/85">
-        {features.map((feature) => (
+        {plan.features.map((feature) => (
           <li key={feature} className="flex items-start gap-2">
             <Check className={`mt-0.5 h-4 w-4 shrink-0 ${colors.accent}`} strokeWidth={3} aria-hidden="true" />
             <span>{feature}</span>
@@ -84,7 +86,7 @@ function PlanCard({ plan }: { plan: Plan }) {
           <span className="text-3xl font-black">{plan.price}</span>
           <span className="mr-2 text-sm font-bold">جنيه</span>
         </div>
-        <Button as="link" to="/booking" variant="primary" size="md" className={`mt-2 w-full rounded-xl shadow-md ${colors.button}`}>
+        <Button type="button" variant="primary" size="md" onClick={() => onSelect(plan)} className={`mt-2 w-full rounded-xl shadow-md ${colors.button}`}>
           الاشتراك
         </Button>
       </div>
@@ -93,6 +95,8 @@ function PlanCard({ plan }: { plan: Plan }) {
 }
 
 export function Pricing() {
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+
   return (
     <section id="pricing" className="relative overflow-hidden bg-[#0d0b37] py-16 text-white sm:py-20 lg:py-24">
       <div className="pointer-events-none absolute -left-32 top-0 h-80 w-80 rounded-full bg-[#5c31c8]/30 blur-3xl" />
@@ -109,7 +113,13 @@ export function Pricing() {
         </div>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {plans.map((plan) => <PlanCard key={`${plan.period}-${plan.grade}-${plan.system}`} plan={plan} />)}
+          {plans.map((plan) => (
+            <PlanCard
+              key={`${plan.period}-${plan.grade}-${plan.system}`}
+              plan={plan}
+              onSelect={setSelectedPlan}
+            />
+          ))}
         </div>
 
         <div className="mx-auto mt-10 grid max-w-5xl divide-y divide-white/15 rounded-3xl border border-white/15 bg-white/[0.06] px-5 py-2 backdrop-blur-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:rtl:divide-x-reverse sm:px-8">
@@ -127,6 +137,10 @@ export function Pricing() {
           </div>
         </div>
       </div>
+
+      {selectedPlan && (
+        <SubscriptionCheckout plan={selectedPlan} onClose={() => setSelectedPlan(null)} />
+      )}
     </section>
   );
 }
