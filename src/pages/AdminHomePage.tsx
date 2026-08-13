@@ -67,8 +67,8 @@ export function AdminHomePage() {
     setFetching(true);
     setError(null);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
       if (!token) throw new Error('NO_SESSION');
 
       const res = await fetch(STATS_URL, {
