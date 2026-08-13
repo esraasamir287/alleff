@@ -21,6 +21,7 @@ import { QuizReviewPage } from './pages/QuizReviewPage';
 import { QuizResultPage } from './pages/QuizResultPage';
 import { BookingPage } from './pages/BookingPage';
 import { AdminSubscriptionsPage } from './pages/AdminSubscriptionsPage';
+import { AdminHomePage } from './pages/AdminHomePage';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -105,6 +106,14 @@ function App() {
             }
           />
           <Route path="/admin" element={<AdminLoginPage />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AdminRoute>
+                <AdminHomePage />
+              </AdminRoute>
+            }
+          />
           <Route
             path="/admin/subscriptions"
             element={

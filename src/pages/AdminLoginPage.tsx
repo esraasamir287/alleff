@@ -50,7 +50,7 @@ export function AdminLoginPage() {
   const [searchParams] = useSearchParams();
   const { user, loading, session } = useAuth();
 
-  const redirectPath = searchParams.get('redirect') ?? '/admin/subscriptions';
+  const redirectPath = searchParams.get('redirect') ?? '/admin/dashboard';
   const isExpired = searchParams.get('expired') === 'true';
 
   // If an authenticated admin lands here, send them straight to the dashboard.

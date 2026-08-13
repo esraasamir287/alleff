@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   Check,
@@ -7,12 +6,11 @@ import {
   ExternalLink,
   ImageOff,
   Loader2,
-  LogOut,
   X,
 } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 import { supabase } from '../lib/supabaseClient';
-import { QuizLayout } from '../components/quiz/QuizLayout';
+import { AdminLayout } from '../components/admin/AdminLayout';
 
 interface SubscriptionRequest {
   id: string;
@@ -55,8 +53,7 @@ function formatDate(iso: string): string {
 }
 
 export function AdminSubscriptionsPage() {
-  const { user, loading, profileLoading, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user, loading, profileLoading } = useAuth();
 
   const [requests, setRequests] = useState<SubscriptionRequest[]>([]);
   const [fetching, setFetching] = useState(true);
@@ -64,7 +61,6 @@ export function AdminSubscriptionsPage() {
   const [forbidden, setForbidden] = useState(false);
   const [urlLoadingId, setUrlLoadingId] = useState<string | null>(null);
   const [urlErrorId, setUrlErrorId] = useState<string | null>(null);
-  const [signingOut, setSigningOut] = useState(false);
 
   const loadRequests = useCallback(async () => {
     setFetching(true);
@@ -112,13 +108,6 @@ export function AdminSubscriptionsPage() {
     void loadRequests();
   }, [user, loading, profileLoading, loadRequests]);
 
-  async function handleLogout() {
-    if (signingOut) return;
-    setSigningOut(true);
-    await logout();
-    navigate('/login?loggedout=true', { replace: true });
-  }
-
   async function handleViewReceipt(req: SubscriptionRequest) {
     setUrlLoadingId(req.id);
     setUrlErrorId(null);
@@ -156,17 +145,17 @@ export function AdminSubscriptionsPage() {
 
   if (loading || (user && profileLoading)) {
     return (
-      <QuizLayout isAuthenticated={!!user} showAuth={false}>
+      <AdminLayout title="طلبات الاشتراك" subtitle="مراجعة طلبات الاشتراك وعرض إيصالات التحويل">
         <div className="flex justify-center py-20">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-secondary-100 border-t-secondary" aria-hidden="true" />
         </div>
-      </QuizLayout>
+      </AdminLayout>
     );
   }
 
   if (forbidden) {
     return (
-      <QuizLayout isAuthenticated userName={user.email}>
+      <AdminLayout title="طلبات الاشتراك">
         <div className="mx-auto flex max-w-md flex-col items-center gap-4 rounded-3xl border border-secondary-100 bg-white px-6 py-12 text-center shadow-soft">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-600">
             <AlertCircle className="h-8 w-8" aria-hidden="true" />
@@ -176,41 +165,13 @@ export function AdminSubscriptionsPage() {
             هذه الصفحة مخصصة للمشرفين فقط. إذا كنت مشرفًا، تواصل مع مدير النظام لتفعيل صلاحية المشرف لحسابك.
           </p>
         </div>
-      </QuizLayout>
+      </AdminLayout>
     );
   }
 
   return (
-    <QuizLayout isAuthenticated userName={user.email} showAuth={false}>
+    <AdminLayout title="طلبات الاشتراك" subtitle="مراجعة طلبات الاشتراك وعرض إيصالات التحويل">
       <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-secondary-50 px-4 py-1.5 text-sm font-bold text-secondary-700">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-              لوحة المشرف
-            </span>
-            <h1 className="mt-3 text-3xl font-extrabold text-primary sm:text-4xl">
-              طلبات الاشتراك
-            </h1>
-            <p className="mt-2 text-sm text-muted">
-              مراجعة طلبات الاشتراك وعرض إيصالات التحويل.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={signingOut}
-            className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold text-muted transition-colors hover:bg-soft hover:text-primary disabled:opacity-60"
-          >
-            {signingOut ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <LogOut className="h-4 w-4" aria-hidden="true" />
-            )}
-            <span className="hidden sm:inline">{signingOut ? 'جارٍ الخروج...' : 'تسجيل الخروج'}</span>
-          </button>
-        </div>
-
         {error && (
           <div
             role="alert"
@@ -324,7 +285,7 @@ export function AdminSubscriptionsPage() {
           </div>
         )}
       </div>
-    </QuizLayout>
+    </AdminLayout>
   );
 }
 
