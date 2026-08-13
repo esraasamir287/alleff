@@ -38,15 +38,22 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(401, { success: false, message: 'يجب تسجيل الدخول.' });
   }
 
-  // Admin check — user-immutable app_metadata.is_admin
-  const isAdmin = (userData.user.app_metadata as Record<string, unknown>)?.is_admin === true;
-  if (!isAdmin) {
-    return jsonResponse(403, { success: false, message: 'هذه الصفحة مخصصة للمشرفين فقط.' });
-  }
-
+  // Admin check — read live app_metadata via GoTrue admin API (service role)
+  // instead of trusting the JWT, which may be stale if is_admin was set after
+  // the token was issued.
   const adminClient: SupabaseClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+  const { data: adminUserData, error: adminUserError } =
+    await adminClient.auth.admin.getUserById(userData.user.id);
+  if (adminUserError || !adminUserData?.user) {
+    return jsonResponse(403, { success: false, message: 'هذه الصفحة مخصصة للمشرفين فقط.' });
+  }
+  const isAdmin =
+    (adminUserData.user.app_metadata as Record<string, unknown> | null)?.is_admin === true;
+  if (!isAdmin) {
+    return jsonResponse(403, { success: false, message: 'هذه الصفحة مخصصة للمشرفين فقط.' });
+  }
 
   const url = new URL(req.url);
   const action = url.pathname.replace(/\/+$/, '').split('/').pop() ?? '';

@@ -43,22 +43,21 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(401, { success: false, isAdmin: false, message: 'يجب تسجيل الدخول.' });
     }
 
-    // Read is_admin from auth.users raw_app_meta_data via service role — this
-    // is always current, unlike the JWT which may be stale.
+    // Read is_admin from auth.users via the GoTrue admin API (service role).
+    // The Supabase client cannot query auth.users as a table — it's an
+    // internal auth-schema table not exposed through PostgREST. Using
+    // auth.admin.getUserById reads the live metadata regardless of JWT age.
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
-    const { data: authUser, error: metaError } = await adminClient
-      .from('users')
-      .select('raw_app_meta_data')
-      .eq('id', userData.user.id)
-      .single();
+    const { data: adminUserData, error: metaError } =
+      await adminClient.auth.admin.getUserById(userData.user.id);
 
-    if (metaError || !authUser) {
+    if (metaError || !adminUserData?.user) {
       return jsonResponse(200, { success: true, isAdmin: false });
     }
 
-    const metaData = authUser.raw_app_meta_data as Record<string, unknown> | null;
+    const metaData = adminUserData.user.app_metadata as Record<string, unknown> | null;
     const isAdmin = metaData?.is_admin === true;
 
     return jsonResponse(200, { success: true, isAdmin });
