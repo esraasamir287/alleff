@@ -21,8 +21,10 @@ import { QuizReviewPage } from './pages/QuizReviewPage';
 import { QuizResultPage } from './pages/QuizResultPage';
 import { BookingPage } from './pages/BookingPage';
 import { AdminSubscriptionsPage } from './pages/AdminSubscriptionsPage';
+import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { AdminRoute } from './components/auth/AdminRoute';
 
 function LandingPage() {
   return (
@@ -102,12 +104,13 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/admin" element={<AdminLoginPage />} />
           <Route
             path="/admin/subscriptions"
             element={
-              <ProtectedRoute requireProfileComplete={false}>
+              <AdminRoute>
                 <AdminSubscriptionsPage />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
         </Routes>

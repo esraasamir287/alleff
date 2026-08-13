@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   Check,
@@ -162,10 +162,6 @@ export function AdminSubscriptionsPage() {
         </div>
       </QuizLayout>
     );
-  }
-
-  if (!user) {
-    return <Navigate to="/login?redirect=%2Fadmin%2Fsubscriptions" replace />;
   }
 
   if (forbidden) {
