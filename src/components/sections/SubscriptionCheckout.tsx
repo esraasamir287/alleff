@@ -364,9 +364,29 @@ function PaymentCard({
 
 function InstaPayLogo() {
   return (
-    <svg viewBox="0 0 48 48" className="h-8 w-8" role="img" aria-label="InstaPay">
-      <rect width="48" height="48" rx="12" fill="#EE2B7A" />
-      <text x="24" y="30" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff" fontFamily="system-ui, sans-serif">IP</text>
+    <svg
+      viewBox="0 0 198 128"
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-8 w-auto"
+      role="img"
+      aria-label="InstaPay"
+      fill="none"
+    >
+      <path
+        d="M 190 13 L 185 8 L 177 5 L 133 5 L 115 23 L 169 23 L 173 26 L 174 31 L 172 35 L 167 40 L 165 40 L 164 41 L 121 41 L 103 57 L 97 78 L 114 78 L 119 65 L 119 62 L 121 59 L 161 59 L 162 58 L 167 57 L 178 51 L 186 43 L 187 40 L 190 36 L 190 34 L 192 30 L 193 21 Z M 159 100 L 157 98 L 154 98 L 131 122 L 138 122 L 152 107 L 154 108 L 155 116 L 154 117 L 146 117 L 143 121 L 141 122 L 164 122 L 162 112 L 161 111 L 161 108 L 160 107 L 160 104 L 159 103 Z M 141 100 L 138 98 L 122 98 L 117 103 L 134 103 L 136 105 L 136 107 L 133 110 L 114 110 L 112 113 L 112 116 L 111 117 L 110 122 L 115 122 L 118 116 L 130 116 L 131 115 L 136 114 L 141 108 L 141 106 L 142 105 Z M 167 122 L 172 122 L 175 114 L 192 98 L 185 98 L 175 108 L 173 106 L 170 98 L 163 98 L 164 102 L 166 105 L 166 107 L 169 112 L 169 117 Z"
+        fill="#7D569E"
+        fillRule="evenodd"
+      />
+      <path
+        d="M 100 4 L 81 4 L 81 6 L 83 8 L 93 27 L 98 34 L 101 41 L 59 78 L 78 78 L 80 77 L 120 41 L 119 37 L 117 35 L 107 16 L 102 9 Z M 71 4 L 52 4 L 52 5 L 54 7 L 56 12 L 58 14 L 60 19 L 62 21 L 64 26 L 72 39 L 72 41 L 47 64 L 46 64 L 39 71 L 38 71 L 31 78 L 30 78 L 50 78 L 58 70 L 59 70 L 66 63 L 67 63 L 74 56 L 75 56 L 82 49 L 83 49 L 92 41 Z"
+        fill="#E7937F"
+        fillRule="evenodd"
+      />
+      <path
+        d="M 37 32 L 20 32 L 17 39 L 16 45 L 14 48 L 14 51 L 13 52 L 5 78 L 22 78 Z M 73 98 L 53 98 L 49 100 L 45 106 L 45 109 L 47 111 L 49 111 L 50 112 L 63 112 L 65 114 L 62 117 L 45 117 L 40 122 L 60 122 L 65 120 L 69 115 L 69 109 L 67 107 L 53 107 L 51 105 L 53 103 L 68 103 Z M 23 98 L 21 101 L 21 103 L 14 122 L 19 122 L 23 109 L 24 108 L 27 111 L 32 120 L 34 122 L 36 122 L 39 118 L 45 98 L 40 98 L 40 100 L 37 107 L 37 110 L 35 112 L 28 101 L 25 98 Z M 108 100 L 106 98 L 104 98 L 101 100 L 81 122 L 87 122 L 101 107 L 102 107 L 104 110 L 105 116 L 104 117 L 96 117 L 91 122 L 109 122 L 109 120 L 111 116 L 111 111 L 109 107 Z M 29 5 L 28 6 L 23 23 L 40 23 L 41 18 L 43 15 L 44 9 L 46 5 Z M 96 98 L 76 98 L 71 103 L 78 103 L 79 104 L 73 122 L 78 122 L 78 120 L 80 117 L 81 111 L 84 104 L 85 103 L 91 103 Z M 17 98 L 13 98 L 12 99 L 5 122 L 9 122 L 10 121 Z"
+        fill="#522A74"
+        fillRule="evenodd"
+      />
     </svg>
   );
 }
