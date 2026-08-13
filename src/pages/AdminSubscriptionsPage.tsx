@@ -58,29 +58,18 @@ export function AdminSubscriptionsPage() {
   const { user, loading, profileLoading, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminChecked, setAdminChecked] = useState(false);
   const [requests, setRequests] = useState<SubscriptionRequest[]>([]);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
   const [urlLoadingId, setUrlLoadingId] = useState<string | null>(null);
   const [urlErrorId, setUrlErrorId] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
-  useEffect(() => {
-    if (loading || (user && profileLoading)) return;
-    if (!user) {
-      setAdminChecked(true);
-      return;
-    }
-    const appMeta = (user.app_metadata as Record<string, unknown>) ?? {};
-    setIsAdmin(appMeta.is_admin === true);
-    setAdminChecked(true);
-  }, [user, loading, profileLoading]);
-
   const loadRequests = useCallback(async () => {
     setFetching(true);
     setError(null);
+    setForbidden(false);
     try {
       const { data: session } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -92,32 +81,36 @@ export function AdminSubscriptionsPage() {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
             'Content-Type': 'application/json',
           },
         },
       );
+      if (res.status === 403) {
+        setForbidden(true);
+        return;
+      }
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.message || `REQUEST_FAILED_${res.status}`);
       }
       const json = await res.json();
       setRequests((json.data as SubscriptionRequest[]) ?? []);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'UNKNOWN';
-      if (msg === 'FORBIDDEN') {
-        setError('لا تملك صلاحية الوصول إلى هذه الصفحة.');
-      } else {
-        setError('تعذّر تحميل طلبات الاشتراك. حاول مرة أخرى.');
-      }
+    } catch {
+      setError('تعذّر تحميل طلبات الاشتراك. حاول مرة أخرى.');
     } finally {
       setFetching(false);
     }
   }, []);
 
+  // Always attempt to load once the session is restored. The edge function
+  // is the authoritative admin check (reads app_metadata server-side), so we
+  // don't gate on a possibly-stale client-side is_admin flag.
   useEffect(() => {
-    if (!adminChecked || !isAdmin) return;
+    if (loading || (user && profileLoading)) return;
+    if (!user) return;
     void loadRequests();
-  }, [adminChecked, isAdmin, loadRequests]);
+  }, [user, loading, profileLoading, loadRequests]);
 
   async function handleLogout() {
     if (signingOut) return;
@@ -140,6 +133,7 @@ export function AdminSubscriptionsPage() {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ receiptPath: req.receipt_path }),
@@ -153,19 +147,14 @@ export function AdminSubscriptionsPage() {
       const signedUrl = json?.data?.signedUrl as string | undefined;
       if (!signedUrl) throw new Error('NO_URL');
       window.open(signedUrl, '_blank', 'noopener,noreferrer');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'UNKNOWN';
-      if (msg === 'FORBIDDEN') {
-        setUrlErrorId(req.id);
-      } else {
-        setUrlErrorId(req.id);
-      }
+    } catch {
+      setUrlErrorId(req.id);
     } finally {
       setUrlLoadingId(null);
     }
   }
 
-  if (loading || (user && profileLoading) || !adminChecked) {
+  if (loading || (user && profileLoading)) {
     return (
       <QuizLayout isAuthenticated={!!user} showAuth={false}>
         <div className="flex justify-center py-20">
@@ -179,7 +168,7 @@ export function AdminSubscriptionsPage() {
     return <Navigate to="/login?redirect=%2Fadmin%2Fsubscriptions" replace />;
   }
 
-  if (!isAdmin) {
+  if (forbidden) {
     return (
       <QuizLayout isAuthenticated userName={user.email}>
         <div className="mx-auto flex max-w-md flex-col items-center gap-4 rounded-3xl border border-secondary-100 bg-white px-6 py-12 text-center shadow-soft">
