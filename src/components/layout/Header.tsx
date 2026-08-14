@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, ClipboardList } from 'lucide-react';
+import { Menu, X, LogOut, ClipboardList, LayoutDashboard } from 'lucide-react';
 import { navItems } from '../../data/navItems';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../context/useAuth';
+import { fetchLatestSubscriptionRequest, isDashboardEligible } from '../../lib/subscriptionApi';
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -11,8 +12,28 @@ export function Header() {
   const { user, profile, loading, profileLoading, logout } = useAuth();
   const navigate = useNavigate();
 
+  const [showDashboard, setShowDashboard] = useState(false);
+
   const isAuthenticated = !!user;
   const displayName = profile?.fullName ?? '';
+
+  useEffect(() => {
+    if (!user) {
+      setShowDashboard(false);
+      return;
+    }
+    let mounted = true;
+    fetchLatestSubscriptionRequest(user.id)
+      .then((req) => {
+        if (mounted) setShowDashboard(isDashboardEligible(req));
+      })
+      .catch(() => {
+        if (mounted) setShowDashboard(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -71,6 +92,12 @@ export function Header() {
                 <ClipboardList className="h-4 w-4" aria-hidden="true" />
                 الامتحان
               </Button>
+              {showDashboard && (
+                <Button as="link" to="/dashboard" variant="primary" size="sm">
+                  <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+                  لوحة التحكم
+                </Button>
+              )}
               <Button type="button" variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4" aria-hidden="true" />
                 تسجيل الخروج
@@ -131,6 +158,12 @@ export function Header() {
                     <ClipboardList className="h-4 w-4" aria-hidden="true" />
                     الامتحان
                   </Button>
+                  {showDashboard && (
+                    <Button as="link" to="/dashboard" variant="primary" size="md" onClick={() => setOpen(false)}>
+                      <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+                      لوحة التحكم
+                    </Button>
+                  )}
                   <Button type="button" variant="outline" size="md" onClick={handleLogout}>
                     <LogOut className="h-4 w-4" aria-hidden="true" />
                     تسجيل الخروج

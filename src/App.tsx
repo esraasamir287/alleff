@@ -20,6 +20,7 @@ import { QuizPage } from './pages/QuizPage';
 import { QuizReviewPage } from './pages/QuizReviewPage';
 import { QuizResultPage } from './pages/QuizResultPage';
 import { BookingPage } from './pages/BookingPage';
+import { StudentDashboardPage } from './pages/StudentDashboardPage';
 import { AdminSubscriptionsPage } from './pages/AdminSubscriptionsPage';
 import { AdminHomePage } from './pages/AdminHomePage';
 import { AdminLoginPage } from './pages/AdminLoginPage';
@@ -78,6 +79,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <BookingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <StudentDashboardPage />
               </ProtectedRoute>
             }
           />
