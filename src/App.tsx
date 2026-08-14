@@ -22,6 +22,7 @@ import { QuizResultPage } from './pages/QuizResultPage';
 import { BookingPage } from './pages/BookingPage';
 import { StudentDashboardPage } from './pages/StudentDashboardPage';
 import { AdminSubscriptionsPage } from './pages/AdminSubscriptionsPage';
+import { AdminStudentsPage } from './pages/AdminStudentsPage';
 import { AdminHomePage } from './pages/AdminHomePage';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AuthProvider } from './context/AuthContext';
@@ -128,6 +129,14 @@ function App() {
             element={
               <AdminRoute>
                 <AdminSubscriptionsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/students"
+            element={
+              <AdminRoute>
+                <AdminStudentsPage />
               </AdminRoute>
             }
           />

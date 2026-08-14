@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, LogOut, Loader2, Menu, X, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, LogOut, Loader2, Menu, X, GraduationCap, Users } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
 interface NavItem {
@@ -11,6 +11,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'الرئيسية', to: '/admin', icon: LayoutDashboard },
+  { label: 'الطلاب', to: '/admin/students', icon: Users },
   { label: 'طلبات الاشتراك', to: '/admin/subscriptions', icon: ClipboardList },
 ];
 
