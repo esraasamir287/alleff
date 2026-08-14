@@ -25,6 +25,7 @@ interface SubscriptionRequest {
   receipt_path: string;
   status: RequestStatus;
   student_name: string | null;
+  student_phone: string | null;
   created_at: string;
 }
 
@@ -252,7 +253,14 @@ export function AdminSubscriptionsPage() {
                   {requests.map((req) => (
                     <tr key={req.id} className="text-sm hover:bg-soft/30">
                       <td className="px-4 py-4 font-bold text-ink">
-                        {req.student_name || '—'}
+                        <div className="flex flex-col gap-0.5">
+                          <span>{req.student_name || '—'}</span>
+                          {req.student_phone && (
+                            <span className="text-xs font-medium text-muted" dir="ltr">
+                              {req.student_phone}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-4 text-ink">{req.package_name}</td>
                       <td className="px-4 py-4 font-extrabold text-secondary-700">
@@ -298,6 +306,11 @@ export function AdminSubscriptionsPage() {
                       <p className="truncate text-base font-extrabold text-ink">
                         {req.student_name || 'طالب'}
                       </p>
+                      {req.student_phone && (
+                        <p className="mt-0.5 text-xs font-medium text-muted" dir="ltr">
+                          {req.student_phone}
+                        </p>
+                      )}
                       <p className="mt-0.5 text-sm text-muted">{req.package_name}</p>
                     </div>
                     <StatusBadge status={req.status} />

@@ -57,17 +57,40 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(403, { success: false, message: 'هذه الصفحة مخصصة للمشرفين فقط.' });
   }
 
-  // GET .../admin-subscriptions  → list all requests
+  // GET .../admin-subscriptions  → list all requests (with student profile data)
   if (req.method === 'GET') {
-    const { data, error } = await adminClient
+    const { data: requests, error: reqError } = await adminClient
       .from('subscription_requests')
       .select('id, user_id, package_name, price, payment_method, receipt_path, status, student_name, created_at')
       .order('created_at', { ascending: false });
 
-    if (error) {
+    if (reqError) {
       return jsonResponse(500, { success: false, message: 'تعذر تحميل الطلبات.' });
     }
-    return jsonResponse(200, { success: true, data });
+
+    const userIds = [...new Set((requests ?? []).map((r) => r.user_id).filter(Boolean))];
+    if (userIds.length > 0) {
+      const { data: profiles } = await adminClient
+        .from('student_profiles')
+        .select('user_id, full_name, phone')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(
+        (profiles ?? []).map((p) => [p.user_id, { full_name: p.full_name, phone: p.phone }]),
+      );
+
+      const merged = (requests ?? []).map((r) => {
+        const profile = profileMap.get(r.user_id);
+        return {
+          ...r,
+          student_name: profile?.full_name ?? r.student_name ?? null,
+          student_phone: profile?.phone ?? null,
+        };
+      });
+      return jsonResponse(200, { success: true, data: merged });
+    }
+
+    return jsonResponse(200, { success: true, data: requests ?? [] });
   }
 
   // POST .../admin-subscriptions  { receiptPath }  → signed URL
