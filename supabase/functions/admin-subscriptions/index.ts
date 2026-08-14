@@ -2,7 +2,7 @@ import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
@@ -12,6 +12,8 @@ function jsonResponse(status: number, body: unknown): Response {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
+
+const VALID_STATUSES = new Set(['pending', 'approved', 'rejected']);
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -55,11 +57,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(403, { success: false, message: 'هذه الصفحة مخصصة للمشرفين فقط.' });
   }
 
-  const url = new URL(req.url);
-  const action = url.pathname.replace(/\/+$/, '').split('/').pop() ?? '';
-
   // GET .../admin-subscriptions  → list all requests
-  if (req.method === 'GET' && (action === 'admin-subscriptions' || action === '')) {
+  if (req.method === 'GET') {
     const { data, error } = await adminClient
       .from('subscription_requests')
       .select('id, user_id, package_name, price, payment_method, receipt_path, status, student_name, created_at')
@@ -92,6 +91,37 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(500, { success: false, message: 'تعذر إنشاء رابط الإيصال.' });
     }
     return jsonResponse(200, { success: true, data: { signedUrl: data.signedUrl } });
+  }
+
+  // PATCH .../admin-subscriptions  { requestId, status }  → update status
+  if (req.method === 'PATCH') {
+    let body: { requestId?: string; status?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse(400, { success: false, message: 'بيانات غير صحيحة.' });
+    }
+    const requestId = (body.requestId || '').trim();
+    const newStatus = (body.status || '').trim();
+
+    if (!requestId) {
+      return jsonResponse(400, { success: false, message: 'معرف الطلب مطلوب.' });
+    }
+    if (!VALID_STATUSES.has(newStatus)) {
+      return jsonResponse(400, { success: false, message: 'حالة غير صحيحة.' });
+    }
+
+    const { data, error } = await adminClient
+      .from('subscription_requests')
+      .update({ status: newStatus })
+      .eq('id', requestId)
+      .select('id, status')
+      .single();
+
+    if (error || !data) {
+      return jsonResponse(500, { success: false, message: 'تعذّر تحديث حالة الطلب.' });
+    }
+    return jsonResponse(200, { success: true, data });
   }
 
   return jsonResponse(405, { success: false, message: 'الطريقة غير مسموح بها.' });

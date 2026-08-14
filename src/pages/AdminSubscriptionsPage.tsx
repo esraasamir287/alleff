@@ -2,15 +2,19 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   AlertCircle,
   Check,
+  CheckCircle2,
   Clock,
   ExternalLink,
   ImageOff,
   Loader2,
   X,
+  XCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 import { supabase } from '../lib/supabaseClient';
 import { AdminLayout } from '../components/admin/AdminLayout';
+
+type RequestStatus = 'pending' | 'approved' | 'rejected';
 
 interface SubscriptionRequest {
   id: string;
@@ -19,7 +23,7 @@ interface SubscriptionRequest {
   price: number;
   payment_method: string;
   receipt_path: string;
-  status: string;
+  status: RequestStatus;
   student_name: string | null;
   created_at: string;
 }
@@ -29,16 +33,16 @@ const PAYMENT_LABELS: Record<string, string> = {
   vodafone_cash: 'Vodafone Cash',
 };
 
-const STATUS_STYLES: Record<string, string> = {
+const STATUS_STYLES: Record<RequestStatus, string> = {
   pending: 'bg-amber-100 text-amber-700 border-amber-200',
   approved: 'bg-green-100 text-green-700 border-green-200',
   rejected: 'bg-red-100 text-red-700 border-red-200',
 };
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<RequestStatus, string> = {
   pending: 'قيد المراجعة',
   approved: 'مقبول',
-  rejected: 'مرفوض',
+  rejected: 'غير مقبول',
 };
 
 function formatDate(iso: string): string {
@@ -61,6 +65,8 @@ export function AdminSubscriptionsPage() {
   const [forbidden, setForbidden] = useState(false);
   const [urlLoadingId, setUrlLoadingId] = useState<string | null>(null);
   const [urlErrorId, setUrlErrorId] = useState<string | null>(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
+  const [statusErrorId, setStatusErrorId] = useState<string | null>(null);
 
   const loadRequests = useCallback(async () => {
     setFetching(true);
@@ -99,23 +105,24 @@ export function AdminSubscriptionsPage() {
     }
   }, []);
 
-  // Always attempt to load once the session is restored. The edge function
-  // is the authoritative admin check (reads app_metadata server-side), so we
-  // don't gate on a possibly-stale client-side is_admin flag.
   useEffect(() => {
     if (loading || (user && profileLoading)) return;
     if (!user) return;
     void loadRequests();
   }, [user, loading, profileLoading, loadRequests]);
 
+  async function getSessionToken(): Promise<string> {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) throw new Error('NO_SESSION');
+    return token;
+  }
+
   async function handleViewReceipt(req: SubscriptionRequest) {
     setUrlLoadingId(req.id);
     setUrlErrorId(null);
     try {
-      const { data } = await supabase.auth.getSession();
-      const token = data?.session?.access_token;
-      if (!token) throw new Error('NO_SESSION');
-
+      const token = await getSessionToken();
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-subscriptions`,
         {
@@ -140,6 +147,38 @@ export function AdminSubscriptionsPage() {
       setUrlErrorId(req.id);
     } finally {
       setUrlLoadingId(null);
+    }
+  }
+
+  async function handleUpdateStatus(req: SubscriptionRequest, newStatus: RequestStatus) {
+    if (statusUpdatingId || req.status === newStatus) return;
+    setStatusUpdatingId(req.id);
+    setStatusErrorId(null);
+    try {
+      const token = await getSessionToken();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-subscriptions`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ requestId: req.id, status: newStatus }),
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || `FAILED_${res.status}`);
+      }
+      setRequests((prev) =>
+        prev.map((r) => (r.id === req.id ? { ...r, status: newStatus } : r)),
+      );
+    } catch {
+      setStatusErrorId(req.id);
+    } finally {
+      setStatusUpdatingId(null);
     }
   }
 
@@ -206,6 +245,7 @@ export function AdminSubscriptionsPage() {
                     <th className="px-4 py-3">الحالة</th>
                     <th className="px-4 py-3">التاريخ</th>
                     <th className="px-4 py-3 text-center">الإيصال</th>
+                    <th className="px-4 py-3 text-center">الإجراء</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-secondary-50">
@@ -229,10 +269,18 @@ export function AdminSubscriptionsPage() {
                       </td>
                       <td className="px-4 py-4 text-center">
                         <ViewReceiptButton
-                          req={req}
                           loading={urlLoadingId === req.id}
                           error={urlErrorId === req.id}
                           onClick={() => handleViewReceipt(req)}
+                        />
+                      </td>
+                      <td className="px-4 py-4">
+                        <StatusActions
+                          status={req.status}
+                          updating={statusUpdatingId === req.id}
+                          error={statusErrorId === req.id}
+                          onApprove={() => handleUpdateStatus(req, 'approved')}
+                          onReject={() => handleUpdateStatus(req, 'rejected')}
                         />
                       </td>
                     </tr>
@@ -272,10 +320,19 @@ export function AdminSubscriptionsPage() {
                   </dl>
                   <div className="mt-3">
                     <ViewReceiptButton
-                      req={req}
                       loading={urlLoadingId === req.id}
                       error={urlErrorId === req.id}
                       onClick={() => handleViewReceipt(req)}
+                      full
+                    />
+                  </div>
+                  <div className="mt-3">
+                    <StatusActions
+                      status={req.status}
+                      updating={statusUpdatingId === req.id}
+                      error={statusErrorId === req.id}
+                      onApprove={() => handleUpdateStatus(req, 'approved')}
+                      onReject={() => handleUpdateStatus(req, 'rejected')}
                       full
                     />
                   </div>
@@ -289,9 +346,9 @@ export function AdminSubscriptionsPage() {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const cls = STATUS_STYLES[status] ?? 'bg-secondary-100 text-secondary-700 border-secondary-200';
-  const label = STATUS_LABELS[status] ?? status;
+function StatusBadge({ status }: { status: RequestStatus }) {
+  const cls = STATUS_STYLES[status];
+  const label = STATUS_LABELS[status];
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold ${cls}`}
@@ -308,14 +365,66 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function StatusActions({
+  status,
+  updating,
+  error,
+  onApprove,
+  onReject,
+  full,
+}: {
+  status: RequestStatus;
+  updating: boolean;
+  error: boolean;
+  onApprove: () => void;
+  onReject: () => void;
+  full?: boolean;
+}) {
+  return (
+    <div className={full ? 'flex flex-col gap-1.5' : 'flex items-center justify-center gap-1.5'}>
+      <div className={full ? 'flex gap-2' : 'flex items-center gap-1.5'}>
+        <button
+          type="button"
+          onClick={onApprove}
+          disabled={updating || status === 'approved'}
+          className="inline-flex items-center justify-center gap-1 rounded-full bg-green-600 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {updating ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          ) : (
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
+          قبول
+        </button>
+        <button
+          type="button"
+          onClick={onReject}
+          disabled={updating || status === 'rejected'}
+          className="inline-flex items-center justify-center gap-1 rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {updating ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          ) : (
+            <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
+          رفض
+        </button>
+      </div>
+      {error && (
+        <span className={full ? 'text-[10px] font-bold text-red-600' : 'text-[10px] font-bold text-red-600'}>
+          تعذّر تحديث الحالة
+        </span>
+      )}
+    </div>
+  );
+}
+
 function ViewReceiptButton({
-  req,
   loading,
   error,
   onClick,
   full,
 }: {
-  req: SubscriptionRequest;
   loading: boolean;
   error: boolean;
   onClick: () => void;
