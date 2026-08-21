@@ -100,6 +100,7 @@ export function SignUpPage() {
 
     if (result.success) {
       setSuccess(true);
+      window.fbq?.('track', 'CompleteRegistration');
       setTimeout(() => navigate('/'), 1500);
     } else {
       const backendErrors = result.fieldErrors ?? {};
