@@ -24,14 +24,13 @@ export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
           </button>
         )}
       </div>
-      <div dir="ltr" className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-        <iframe
+      <div dir="ltr" className="w-full bg-black">
+        <video
           src={videoUrl}
-          className="absolute inset-0 h-full w-full"
-          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-          allowFullScreen
-          title={title ?? 'فيديو الشرح'}
-          loading="lazy"
+          controls
+          playsInline
+          preload="metadata"
+          className="aspect-video w-full"
         />
       </div>
     </div>

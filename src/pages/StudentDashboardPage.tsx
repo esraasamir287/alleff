@@ -63,7 +63,7 @@ const UNITS: Unit[] = [
     subtitle: 'أساسيات البرمجة',
     progress: 42,
     lessons: [
-      { id: 1, title: 'ما هي البرمجة؟', videoUrl: 'https://player.cloudinary.com/embed/?cloud_name=vnvyddkj&public_id=samples%2Felephants' },
+      { id: 1, title: 'ما هي البرمجة؟', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
       { id: 2, title: 'لغات البرمجة', locked: true },
       { id: 3, title: 'خطوات حل المشكلة', locked: true },
       { id: 4, title: 'الخوارزميات والمخططات الانسيابية', locked: true },
