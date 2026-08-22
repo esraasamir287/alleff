@@ -1,33 +1,10 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft,
-  Bell,
-  BarChart3,
-  BookOpen,
-  CheckCircle2,
-  ChevronDown,
-  ChevronLeft,
-  ClipboardCheck,
-  FileDown,
-  FileText,
-  Headphones,
-  Home,
-  Loader2,
-  LockKeyhole,
-  LogOut,
-  Menu,
-  MessageCircle,
-  PlayCircle,
-  Settings,
-  Sparkles,
-  UploadCloud,
-  UserCircle,
-  X,
-} from 'lucide-react';
+import { ArrowLeft, Bell, BarChart3, BookOpen, CheckCircle2, ChevronDown, ChevronLeft, ClipboardCheck, FileDown, FileText, Headphones, Home, Loader2, LogOut, Menu, MessageCircle, PlayCircle, Settings, Sparkles, CircleUser as UserCircle, X } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 import { VideoPlayer } from '../components/ui/VideoPlayer';
 import { fetchLatestSubscriptionRequest, getPackageDetails, isDashboardEligible, type StudentPackageDetails, type StudentSubscriptionRequest, type SubscriptionRequestStatus } from '../lib/subscriptionApi';
+import { fetchUnitsWithLessons, type ContentLesson, type UnitWithLessons } from '../lib/contentApi';
 
 const STATUS_LABEL: Record<SubscriptionRequestStatus, string> = {
   pending: 'قيد المراجعة',
@@ -41,62 +18,15 @@ const STATUS_STYLE: Record<SubscriptionRequestStatus, string> = {
   rejected: 'bg-red-50 text-red-700 border-red-200',
 };
 
-type LessonItem = {
-  id: number;
-  title: string;
-  locked?: boolean;
-  videoUrl?: string;
-};
+type LessonItem = ContentLesson;
 
-type Unit = {
-  id: number;
-  title: string;
-  subtitle: string;
-  progress: number;
-  lessons: LessonItem[];
-};
-
-const UNITS: Unit[] = [
-  {
-    id: 1,
-    title: 'الوحدة الأولى',
-    subtitle: 'أساسيات البرمجة',
-    progress: 42,
-    lessons: [
-      { id: 1, title: 'ما هي البرمجة؟', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
-      { id: 2, title: 'لغات البرمجة', locked: true },
-      { id: 3, title: 'خطوات حل المشكلة', locked: true },
-      { id: 4, title: 'الخوارزميات والمخططات الانسيابية', locked: true },
-      { id: 5, title: 'المتغيرات وأنواع البيانات', locked: true },
-    ],
-  },
-  {
-    id: 2,
-    title: 'الوحدة الثانية',
-    subtitle: 'التفكير البرمجي',
-    progress: 0,
-    lessons: [
-      { id: 6, title: 'التفكير المنطقي' },
-      { id: 7, title: 'التعامل مع البيانات', locked: true },
-      { id: 8, title: 'بناء أول مشروع', locked: true },
-    ],
-  },
-  {
-    id: 3,
-    title: 'الوحدة الثالثة',
-    subtitle: 'مشروعات تطبيقية',
-    progress: 0,
-    lessons: [
-      { id: 9, title: 'فكرة المشروع' },
-      { id: 10, title: 'التنفيذ والتجربة', locked: true },
-    ],
-  },
-];
+type Unit = UnitWithLessons;
 
 export function StudentDashboardPage() {
   const { user, profile, loading, profileLoading, logout } = useAuth();
   const navigate = useNavigate();
   const [request, setRequest] = useState<StudentSubscriptionRequest | null>(null);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,9 +38,14 @@ export function StudentDashboardPage() {
     setFetching(true);
     setError(null);
     try {
-      setRequest(await fetchLatestSubscriptionRequest(user.id));
+      const [req, unitsData] = await Promise.all([
+        fetchLatestSubscriptionRequest(user.id),
+        fetchUnitsWithLessons(),
+      ]);
+      setRequest(req);
+      setUnits(unitsData);
     } catch {
-      setError('تعذّر تحميل بيانات اشتراكك. حاول مرة أخرى.');
+      setError('تعذّر تحميل بياناتك. حاول مرة أخرى.');
     } finally {
       setFetching(false);
     }
@@ -151,6 +86,7 @@ export function StudentDashboardPage() {
         packageDetails={packageDetails}
         status={request!.status}
         userName={profile?.fullName}
+        units={units}
         error={error}
         onRetry={load}
       />
@@ -250,11 +186,19 @@ function Sidebar({ userName, onLogout, onNavigate }: { userName?: string | null;
   );
 }
 
-function DashboardContent({ packageDetails, status, userName, error, onRetry }: { packageDetails: StudentPackageDetails; status: SubscriptionRequestStatus; userName?: string | null; error: string | null; onRetry: () => void }) {
+function DashboardContent({ packageDetails, status, userName, units, error, onRetry }: { packageDetails: StudentPackageDetails; status: SubscriptionRequestStatus; userName?: string | null; units: Unit[]; error: string | null; onRetry: () => void }) {
   const [activeUnit, setActiveUnit] = useState(0);
-  const [openLesson, setOpenLesson] = useState<number | null>(1);
-  const unit = UNITS[activeUnit];
+  const [openLesson, setOpenLesson] = useState<string | null>(null);
+  const unit = units[activeUnit];
   const firstName = userName?.trim().split(' ')[0] || 'صديقي';
+
+  useEffect(() => {
+    if (units.length > 0 && units[activeUnit]?.lessons[0]) {
+      setOpenLesson(units[activeUnit].lessons[0].id);
+    } else {
+      setOpenLesson(null);
+    }
+  }, [activeUnit, units]);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -282,8 +226,10 @@ function DashboardContent({ packageDetails, status, userName, error, onRetry }: 
 
       <section className="rounded-3xl border border-[#e9e6f5] bg-white shadow-[0_8px_30px_rgba(73,52,145,0.04)]">
         <div className="flex items-center justify-between border-b border-[#eeebf8] px-5 py-4 sm:px-7"><div className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-[#6941d3]" /><h2 className="text-lg font-black text-[#211b60]">دروسي</h2></div><span className={`rounded-full border px-3 py-1 text-xs font-bold ${STATUS_STYLE[status]}`}>{STATUS_LABEL[status]}</span></div>
-        <div className="flex overflow-x-auto border-b border-[#eeebf8] px-3 sm:px-6">{UNITS.map((item, index) => <button key={item.id} type="button" onClick={() => { setActiveUnit(index); setOpenLesson(index === 0 ? 1 : item.lessons[0].id); }} className={`relative min-w-[112px] px-3 py-4 text-sm font-extrabold transition sm:min-w-[150px] ${activeUnit === index ? 'text-[#6941d3]' : 'text-[#8e8aa5] hover:text-[#6941d3]'}`}>{item.title}{activeUnit === index && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[#7040db]" />}</button>)}</div>
-        <div className="p-4 sm:p-6"><div className="mb-4 flex items-center justify-between gap-3"><div><h3 className="text-base font-black text-[#272061]">{unit.title}: {unit.subtitle}</h3><p className="mt-1 text-xs font-bold text-[#9793ad]">{unit.lessons.length} دروس</p></div><ProgressRing value={unit.progress} /></div><div className="flex flex-col gap-2">{unit.lessons.map((lesson) => <LessonAccordion key={lesson.id} lesson={lesson} open={openLesson === lesson.id} onToggle={() => setOpenLesson(openLesson === lesson.id ? null : lesson.id)} />)}</div><button type="button" className="mx-auto mt-4 flex items-center gap-1 text-sm font-extrabold text-[#7643d6] transition hover:text-[#4e2db2]">عرض كل الدروس <ChevronDown className="h-4 w-4" /></button></div>
+        {units.length === 0 ? <div className="px-5 py-12 text-center text-sm font-bold text-[#9793ad]">لا توجد وحدات منشورة بعد.</div> : <>
+        <div className="flex overflow-x-auto border-b border-[#eeebf8] px-3 sm:px-6">{units.map((item, index) => <button key={item.id} type="button" onClick={() => setActiveUnit(index)} className={`relative min-w-[112px] px-3 py-4 text-sm font-extrabold transition sm:min-w-[150px] ${activeUnit === index ? 'text-[#6941d3]' : 'text-[#8e8aa5] hover:text-[#6941d3]'}`}>{item.title}{activeUnit === index && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[#7040db]" />}</button>)}</div>
+        <div className="p-4 sm:p-6"><div className="mb-4 flex items-center justify-between gap-3"><div><h3 className="text-base font-black text-[#272061]">{unit.title}</h3><p className="mt-1 text-xs font-bold text-[#9793ad]">{unit.lessons.length} دروس</p></div></div><div className="flex flex-col gap-2">{unit.lessons.map((lesson) => <LessonAccordion key={lesson.id} lesson={lesson} open={openLesson === lesson.id} onToggle={() => setOpenLesson(openLesson === lesson.id ? null : lesson.id)} />)}</div></div>
+        </>}
       </section>
       <div className="mt-5 flex items-center justify-center gap-4 rounded-2xl bg-gradient-to-l from-[#eee6ff] to-[#faf8ff] px-5 py-4 text-center text-sm font-bold text-[#68618f]"><span className="text-xl text-[#7651d5]">“</span> توقفي عندما تتعبي، توقفي عندما تنتهي... أنتِ أقرب مما تتخيلي! <span className="text-xl text-[#7651d5]">”</span></div>
     </div>
@@ -294,18 +240,14 @@ function StatCard({ icon, iconClass, label, value, detail, progress }: { icon: R
   return <div className="rounded-2xl border border-[#e9e6f5] bg-white p-4 shadow-[0_5px_20px_rgba(73,52,145,0.03)]"><div className="flex items-start justify-between gap-2"><div><p className="text-[11px] font-bold text-[#8d89a5]">{label}</p><p className="mt-2 text-2xl font-black text-[#191650]">{value}</p><p className="mt-1 text-[11px] font-bold text-[#aaa6ba]">{detail}</p></div><span className={`flex h-9 w-9 items-center justify-center rounded-full ${iconClass}`}>{icon}</span></div>{progress && <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#ebe8f4]"><div className="h-full w-[42%] rounded-full bg-[#7441e4]" /></div>}</div>;
 }
 
-function ProgressRing({ value }: { value: number }) {
-  return <div className="relative flex h-14 w-14 items-center justify-center rounded-full" style={{ background: `conic-gradient(#7040db ${value * 3.6}deg, #e8e5f1 0deg)` }}><div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-xs font-black text-[#372c82]">{value}%</div></div>;
-}
-
 function LessonAccordion({ lesson, open, onToggle }: { lesson: LessonItem; open: boolean; onToggle: () => void }) {
-  return <div className="overflow-hidden rounded-2xl border border-[#e7e3f3] bg-white"><button type="button" onClick={onToggle} className={`flex w-full items-center justify-between gap-3 px-4 py-3.5 text-right transition ${open ? 'bg-[#f4efff]' : 'hover:bg-[#fbfaff]'}`}><span className="flex items-center gap-3"><span className={`flex h-8 w-8 items-center justify-center rounded-xl ${lesson.locked ? 'bg-[#f1eff8] text-[#aaa5bb]' : 'bg-[#7040db] text-white'}`}>{lesson.locked ? <LockKeyhole className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}</span><span className="text-sm font-extrabold text-[#282263]">الدرس {lesson.id}: {lesson.title}</span></span>{open ? <ChevronDown className="h-4 w-4 text-[#7040db]" /> : <ChevronLeft className="h-4 w-4 text-[#8c88a6]" />}</button>{open && <LessonContent lesson={lesson} />}</div>;
+  return <div className="overflow-hidden rounded-2xl border border-[#e7e3f3] bg-white"><button type="button" onClick={onToggle} className={`flex w-full items-center justify-between gap-3 px-4 py-3.5 text-right transition ${open ? 'bg-[#f4efff]' : 'hover:bg-[#fbfaff]'}`}><span className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#7040db] text-white"><BookOpen className="h-4 w-4" /></span><span className="text-sm font-extrabold text-[#282263]">الدرس {lesson.lesson_order}: {lesson.title}</span></span>{open ? <ChevronDown className="h-4 w-4 text-[#7040db]" /> : <ChevronLeft className="h-4 w-4 text-[#8c88a6]" />}</button>{open && <LessonContent lesson={lesson} />}</div>;
 }
 
 function LessonContent({ lesson }: { lesson: LessonItem }) {
   const [videoOpen, setVideoOpen] = useState(false);
-  if (lesson.locked) return <div className="flex items-center justify-center gap-2 border-t border-[#eeeaf8] px-4 py-5 text-xs font-bold text-[#9691ad]"><LockKeyhole className="h-4 w-4" /> أكمل الدرس السابق لفتح هذا المحتوى</div>;
-  return <div className="border-t border-[#eeeaf8] px-4 py-2"><LessonAction icon={<PlayCircle />} iconClass="bg-[#f0e8ff] text-[#6d3dda]" title="محاضرة الفيديو" subtitle="شرح الدرس بالفيديو" action={videoOpen ? 'إخفاء' : 'مشاهدة'} actionClass="bg-[#f0e8ff] text-[#6c39d0]" onAction={() => setVideoOpen((v) => !v)} />{videoOpen && lesson.videoUrl && <VideoPlayer videoUrl={lesson.videoUrl} title={`الدرس ${lesson.id}: ${lesson.title}`} onClose={() => setVideoOpen(false)} />}<LessonAction icon={<ClipboardCheck />} iconClass="bg-[#edf5ff] text-[#4089dc]" title="تقييم قصير" subtitle="اختبار قصير على الدرس" action="ابدأ التقييم" actionClass="bg-[#e7f3ff] text-[#3280d5]" /><LessonAction icon={<FileDown />} iconClass="bg-[#eaf9ed] text-[#27a454]" title="ملزمة الدرس" subtitle="ملف PDF" action="عرض المذكرة" actionClass="bg-[#e8f9ec] text-[#249e4b]" /><LessonAction icon={<UploadCloud />} iconClass="bg-[#fff4df] text-[#e59218]" title="واجب الدرس" subtitle="حل أسئلة المذكرة وارفعها هنا" action="رفع الواجب" actionClass="bg-[#fff4df] text-[#e18d13]" /></div>;
+  const [pdfOpen, setPdfOpen] = useState(false);
+  return <div className="border-t border-[#eeeaf8] px-4 py-2">{lesson.video_url && <><LessonAction icon={<PlayCircle />} iconClass="bg-[#f0e8ff] text-[#6d3dda]" title="فيديو الشرح" subtitle="شرح الدرس بالفيديو" action={videoOpen ? 'إخفاء' : 'مشاهدة'} actionClass="bg-[#f0e8ff] text-[#6c39d0]" onAction={() => setVideoOpen((v) => !v)} />{videoOpen && <VideoPlayer videoUrl={lesson.video_url} title={`الدرس ${lesson.lesson_order}: ${lesson.title}`} onClose={() => setVideoOpen(false)} />}</>}{lesson.pdf_url && <LessonAction icon={<FileDown />} iconClass="bg-[#eaf9ed] text-[#27a454]" title="مذكرة الدرس" subtitle="ملف PDF" action={pdfOpen ? 'إخفاء' : 'عرض المذكرة'} actionClass="bg-[#e8f9ec] text-[#249e4b]" onAction={() => setPdfOpen((v) => !v)} />}{pdfOpen && lesson.pdf_url && <iframe src={lesson.pdf_url} className="mt-2 h-[480px] w-full rounded-2xl border border-[#eeeaf8]" title="مذكرة الدرس" />}{!lesson.video_url && !lesson.pdf_url && <div className="flex items-center justify-center gap-2 py-5 text-xs font-bold text-[#9691ad]">لا يوجد محتوى منشور لهذا الدرس بعد</div>}</div>;
 }
 
 function LessonAction({ icon, iconClass, title, subtitle, action, actionClass, onAction }: { icon: ReactNode; iconClass: string; title: string; subtitle: string; action: string; actionClass: string; onAction?: () => void }) {

@@ -74,6 +74,26 @@ export async function createLesson(
   return data;
 }
 
+export interface UnitWithLessons extends ContentUnit {
+  lessons: ContentLesson[];
+}
+
+export async function fetchUnitsWithLessons(): Promise<UnitWithLessons[]> {
+  const { data, error } = await supabase
+    .from('units')
+    .select('id, title, unit_order, created_at, lessons(id, unit_id, title, lesson_order, video_url, pdf_url, created_at)')
+    .order('unit_order', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map((u) => ({
+    id: u.id,
+    title: u.title,
+    unit_order: u.unit_order,
+    created_at: u.created_at,
+    lessons: (u.lessons ?? []).sort((a: ContentLesson, b: ContentLesson) => a.lesson_order - b.lesson_order),
+  }));
+}
+
 export async function updateLessonContent(
   lessonId: string,
   fields: { video_url?: string | null; pdf_url?: string | null },
