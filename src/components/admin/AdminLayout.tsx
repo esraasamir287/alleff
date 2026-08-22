@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, LogOut, Loader2, Menu, X, GraduationCap, Users } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, LogOut, Loader2, Menu, X, GraduationCap, Users, BookOpen } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
 interface NavItem {
@@ -13,15 +13,17 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'الرئيسية', to: '/admin', icon: LayoutDashboard },
   { label: 'الطلاب', to: '/admin/students', icon: Users },
   { label: 'طلبات الاشتراك', to: '/admin/subscriptions', icon: ClipboardList },
+  { label: 'المحتوى التعليمي', to: '/admin/content', icon: BookOpen },
 ];
 
 interface AdminLayoutProps {
   children: ReactNode;
   title: string;
   subtitle?: string;
+  wide?: boolean;
 }
 
-export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
+export function AdminLayout({ children, title, subtitle, wide = false }: AdminLayoutProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -179,7 +181,7 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
         </header>
 
         <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-          <div className="mx-auto w-full max-w-5xl">{children}</div>
+          <div className={`mx-auto w-full ${wide ? 'max-w-7xl' : 'max-w-5xl'}`}>{children}</div>
         </main>
       </div>
     </div>

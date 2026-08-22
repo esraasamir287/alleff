@@ -23,6 +23,7 @@ import { BookingPage } from './pages/BookingPage';
 import { StudentDashboardPage } from './pages/StudentDashboardPage';
 import { AdminSubscriptionsPage } from './pages/AdminSubscriptionsPage';
 import { AdminStudentsPage } from './pages/AdminStudentsPage';
+import { AdminContentPage } from './pages/AdminContentPage';
 import { AdminHomePage } from './pages/AdminHomePage';
 import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AuthProvider } from './context/AuthContext';
@@ -137,6 +138,14 @@ function App() {
             element={
               <AdminRoute>
                 <AdminStudentsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/content"
+            element={
+              <AdminRoute>
+                <AdminContentPage />
               </AdminRoute>
             }
           />
