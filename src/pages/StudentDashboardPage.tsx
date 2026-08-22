@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
+import { VideoPlayer } from '../components/ui/VideoPlayer';
 import { fetchLatestSubscriptionRequest, getPackageDetails, isDashboardEligible, type StudentPackageDetails, type StudentSubscriptionRequest, type SubscriptionRequestStatus } from '../lib/subscriptionApi';
 
 const STATUS_LABEL: Record<SubscriptionRequestStatus, string> = {
@@ -44,6 +45,7 @@ type LessonItem = {
   id: number;
   title: string;
   locked?: boolean;
+  videoUrl?: string;
 };
 
 type Unit = {
@@ -61,7 +63,7 @@ const UNITS: Unit[] = [
     subtitle: 'أساسيات البرمجة',
     progress: 42,
     lessons: [
-      { id: 1, title: 'ما هي البرمجة؟' },
+      { id: 1, title: 'ما هي البرمجة؟', videoUrl: 'https://player.cloudinary.com/embed/?cloud_name=vnvyddkj&public_id=samples%2Felephants' },
       { id: 2, title: 'لغات البرمجة', locked: true },
       { id: 3, title: 'خطوات حل المشكلة', locked: true },
       { id: 4, title: 'الخوارزميات والمخططات الانسيابية', locked: true },
@@ -297,16 +299,17 @@ function ProgressRing({ value }: { value: number }) {
 }
 
 function LessonAccordion({ lesson, open, onToggle }: { lesson: LessonItem; open: boolean; onToggle: () => void }) {
-  return <div className="overflow-hidden rounded-2xl border border-[#e7e3f3] bg-white"><button type="button" onClick={onToggle} className={`flex w-full items-center justify-between gap-3 px-4 py-3.5 text-right transition ${open ? 'bg-[#f4efff]' : 'hover:bg-[#fbfaff]'}`}><span className="flex items-center gap-3"><span className={`flex h-8 w-8 items-center justify-center rounded-xl ${lesson.locked ? 'bg-[#f1eff8] text-[#aaa5bb]' : 'bg-[#7040db] text-white'}`}>{lesson.locked ? <LockKeyhole className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}</span><span className="text-sm font-extrabold text-[#282263]">الدرس {lesson.id}: {lesson.title}</span></span>{open ? <ChevronDown className="h-4 w-4 text-[#7040db]" /> : <ChevronLeft className="h-4 w-4 text-[#8c88a6]" />}</button>{open && <LessonContent locked={lesson.locked} />}</div>;
+  return <div className="overflow-hidden rounded-2xl border border-[#e7e3f3] bg-white"><button type="button" onClick={onToggle} className={`flex w-full items-center justify-between gap-3 px-4 py-3.5 text-right transition ${open ? 'bg-[#f4efff]' : 'hover:bg-[#fbfaff]'}`}><span className="flex items-center gap-3"><span className={`flex h-8 w-8 items-center justify-center rounded-xl ${lesson.locked ? 'bg-[#f1eff8] text-[#aaa5bb]' : 'bg-[#7040db] text-white'}`}>{lesson.locked ? <LockKeyhole className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}</span><span className="text-sm font-extrabold text-[#282263]">الدرس {lesson.id}: {lesson.title}</span></span>{open ? <ChevronDown className="h-4 w-4 text-[#7040db]" /> : <ChevronLeft className="h-4 w-4 text-[#8c88a6]" />}</button>{open && <LessonContent lesson={lesson} />}</div>;
 }
 
-function LessonContent({ locked }: { locked?: boolean }) {
-  if (locked) return <div className="flex items-center justify-center gap-2 border-t border-[#eeeaf8] px-4 py-5 text-xs font-bold text-[#9691ad]"><LockKeyhole className="h-4 w-4" /> أكمل الدرس السابق لفتح هذا المحتوى</div>;
-  return <div className="border-t border-[#eeeaf8] px-4 py-2"><LessonAction icon={<PlayCircle />} iconClass="bg-[#f0e8ff] text-[#6d3dda]" title="محاضرة الفيديو" subtitle="شرح الدرس بالفيديو" action="مشاهدة" actionClass="bg-[#f0e8ff] text-[#6c39d0]" /><LessonAction icon={<ClipboardCheck />} iconClass="bg-[#edf5ff] text-[#4089dc]" title="تقييم قصير" subtitle="اختبار قصير على الدرس" action="ابدأ التقييم" actionClass="bg-[#e7f3ff] text-[#3280d5]" /><LessonAction icon={<FileDown />} iconClass="bg-[#eaf9ed] text-[#27a454]" title="ملزمة الدرس" subtitle="ملف PDF" action="عرض المذكرة" actionClass="bg-[#e8f9ec] text-[#249e4b]" /><LessonAction icon={<UploadCloud />} iconClass="bg-[#fff4df] text-[#e59218]" title="واجب الدرس" subtitle="حل أسئلة المذكرة وارفعها هنا" action="رفع الواجب" actionClass="bg-[#fff4df] text-[#e18d13]" /></div>;
+function LessonContent({ lesson }: { lesson: LessonItem }) {
+  const [videoOpen, setVideoOpen] = useState(false);
+  if (lesson.locked) return <div className="flex items-center justify-center gap-2 border-t border-[#eeeaf8] px-4 py-5 text-xs font-bold text-[#9691ad]"><LockKeyhole className="h-4 w-4" /> أكمل الدرس السابق لفتح هذا المحتوى</div>;
+  return <div className="border-t border-[#eeeaf8] px-4 py-2"><LessonAction icon={<PlayCircle />} iconClass="bg-[#f0e8ff] text-[#6d3dda]" title="محاضرة الفيديو" subtitle="شرح الدرس بالفيديو" action={videoOpen ? 'إخفاء' : 'مشاهدة'} actionClass="bg-[#f0e8ff] text-[#6c39d0]" onAction={() => setVideoOpen((v) => !v)} />{videoOpen && lesson.videoUrl && <VideoPlayer videoUrl={lesson.videoUrl} title={`الدرس ${lesson.id}: ${lesson.title}`} onClose={() => setVideoOpen(false)} />}<LessonAction icon={<ClipboardCheck />} iconClass="bg-[#edf5ff] text-[#4089dc]" title="تقييم قصير" subtitle="اختبار قصير على الدرس" action="ابدأ التقييم" actionClass="bg-[#e7f3ff] text-[#3280d5]" /><LessonAction icon={<FileDown />} iconClass="bg-[#eaf9ed] text-[#27a454]" title="ملزمة الدرس" subtitle="ملف PDF" action="عرض المذكرة" actionClass="bg-[#e8f9ec] text-[#249e4b]" /><LessonAction icon={<UploadCloud />} iconClass="bg-[#fff4df] text-[#e59218]" title="واجب الدرس" subtitle="حل أسئلة المذكرة وارفعها هنا" action="رفع الواجب" actionClass="bg-[#fff4df] text-[#e18d13]" /></div>;
 }
 
-function LessonAction({ icon, iconClass, title, subtitle, action, actionClass }: { icon: ReactNode; iconClass: string; title: string; subtitle: string; action: string; actionClass: string }) {
-  return <div className="flex items-center gap-3 border-b border-[#f0edf8] py-3 last:border-0"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconClass}`}>{icon}</span><div className="min-w-0 flex-1"><p className="text-xs font-extrabold text-[#3c3672]">{title}</p><p className="mt-0.5 truncate text-[11px] font-semibold text-[#a09cb2]">{subtitle}</p></div><button type="button" className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-extrabold transition hover:brightness-95 ${actionClass}`}>{action}</button></div>;
+function LessonAction({ icon, iconClass, title, subtitle, action, actionClass, onAction }: { icon: ReactNode; iconClass: string; title: string; subtitle: string; action: string; actionClass: string; onAction?: () => void }) {
+  return <div className="flex items-center gap-3 border-b border-[#f0edf8] py-3 last:border-0"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconClass}`}>{icon}</span><div className="min-w-0 flex-1"><p className="text-xs font-extrabold text-[#3c3672]">{title}</p><p className="mt-0.5 truncate text-[11px] font-semibold text-[#a09cb2]">{subtitle}</p></div><button type="button" onClick={onAction} className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-extrabold transition hover:brightness-95 ${actionClass}`}>{action}</button></div>;
 }
 
 function EmptyState({ title, text, action, to }: { title: string; text: string; action: string; to: string }) {
