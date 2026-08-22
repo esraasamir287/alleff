@@ -79,7 +79,7 @@ export function AdminContentPage() {
           </div>
         </div>
 
-        <div className="grid min-h-[680px] grid-cols-1 gap-4 lg:grid-cols-[230px_280px_minmax(0,1fr)]" dir="rtl">
+        <div className="grid min-h-[680px] grid-cols-1 gap-4 lg:order-1" dir="rtl">
           <section className="order-1 rounded-2xl border border-secondary-100 bg-white p-3 shadow-soft lg:order-3">
             <div className="flex items-center justify-between px-2 py-2">
               <h3 className="text-base font-extrabold text-primary">الوحدات</h3>
@@ -122,7 +122,7 @@ export function AdminContentPage() {
             </div>
           </section>
 
-          <section className="order-3 overflow-hidden rounded-2xl border border-secondary-100 bg-white shadow-soft lg:order-1">
+          <section className="order-3 overflow-hidden rounded-2xl border border-secondary-100 bg-white shadow-soft lg:grid-cols-[230px_280px_minmax(0,1fr)] ">
             <div className="border-b border-secondary-100 px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div><div className="flex items-center gap-2 text-xs font-bold text-muted"><span>الوحدات</span><span>‹</span><span>{selectedUnit.title}: {selectedUnit.subtitle}</span><span>‹</span><span className="text-secondary">الدرس {selectedLesson.id}</span></div><h3 className="mt-4 text-xl font-extrabold text-primary">{selectedLesson.title}</h3><div className="mt-2 flex items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold ${selectedLesson.status === 'منشور' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{selectedLesson.status}</span><span className="text-xs font-bold text-muted">الترتيب: {selectedLesson.id}</span></div></div>
