@@ -14,10 +14,14 @@ export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
 
   const watchUrl = videoUrl.trim();
 
-  const autoplayEmbed =
-    embedUrl && kind === 'youtube'
-      ? `${embedUrl}&autoplay=1`
-      : embedUrl;
+  const autoplayEmbed = (() => {
+    if (!embedUrl || kind !== 'youtube') return embedUrl;
+
+    const url = new URL(embedUrl);
+    url.searchParams.set('autoplay', '1');
+
+    return url.toString();
+  })();
 
   return (
     <div className="mt-3 overflow-hidden rounded-2xl border border-[#e1d7ff] bg-white shadow-sm">
