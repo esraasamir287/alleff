@@ -1,9 +1,18 @@
 import { supabase } from './supabaseClient';
 
+export interface ContentGrade {
+  id: string;
+  title: string;
+  slug: string;
+  grade_order: number;
+  created_at: string;
+}
+
 export interface ContentUnit {
   id: string;
   title: string;
   unit_order: number;
+  grade_id: string | null;
   created_at: string;
 }
 
@@ -34,17 +43,70 @@ export interface LessonWithCount extends ContentUnit {
   lesson_count: number;
 }
 
-export async function fetchUnitsWithLessonCount(): Promise<LessonWithCount[]> {
+/* ---- Grades CRUD ---- */
+
+export async function fetchGrades(): Promise<ContentGrade[]> {
   const { data, error } = await supabase
+    .from('grades')
+    .select('id, title, slug, grade_order, created_at')
+    .order('grade_order', { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createGrade(title: string, slug: string, gradeOrder: number): Promise<ContentGrade> {
+  const { data, error } = await supabase
+    .from('grades')
+    .insert({ title, slug, grade_order: gradeOrder })
+    .select('id, title, slug, grade_order, created_at')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateGrade(gradeId: string, fields: { title?: string; slug?: string; grade_order?: number }): Promise<ContentGrade> {
+  const { data, error } = await supabase
+    .from('grades')
+    .update(fields)
+    .eq('id', gradeId)
+    .select('id, title, slug, grade_order, created_at')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteGrade(gradeId: string): Promise<void> {
+  const { error } = await supabase
+    .from('grades')
+    .delete()
+    .eq('id', gradeId);
+
+  if (error) throw error;
+}
+
+/* ---- Units CRUD ---- */
+
+export async function fetchUnitsWithLessonCount(gradeId?: string): Promise<LessonWithCount[]> {
+  let query = supabase
     .from('units')
-    .select('id, title, unit_order, created_at, lessons(id)')
+    .select('id, title, unit_order, grade_id, created_at, lessons(id)')
     .order('unit_order', { ascending: true });
+
+  if (gradeId) {
+    query = query.eq('grade_id', gradeId);
+  }
+
+  const { data, error } = query;
 
   if (error) throw error;
   return (data ?? []).map((u) => ({
     id: u.id,
     title: u.title,
     unit_order: u.unit_order,
+    grade_id: u.grade_id,
     created_at: u.created_at,
     lesson_count: u.lessons?.length ?? 0,
   }));
@@ -66,16 +128,39 @@ export async function fetchLessonsByUnit(unitId: string): Promise<ContentLesson[
   }));
 }
 
-export async function createUnit(title: string, unitOrder: number): Promise<ContentUnit> {
+export async function createUnit(title: string, unitOrder: number, gradeId: string): Promise<ContentUnit> {
   const { data, error } = await supabase
     .from('units')
-    .insert({ title, unit_order: unitOrder })
-    .select('id, title, unit_order, created_at')
+    .insert({ title, unit_order: unitOrder, grade_id: gradeId })
+    .select('id, title, unit_order, grade_id, created_at')
     .single();
 
   if (error) throw error;
   return data;
 }
+
+export async function updateUnit(unitId: string, fields: { title?: string; unit_order?: number; grade_id?: string }): Promise<ContentUnit> {
+  const { data, error } = await supabase
+    .from('units')
+    .update(fields)
+    .eq('id', unitId)
+    .select('id, title, unit_order, grade_id, created_at')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteUnit(unitId: string): Promise<void> {
+  const { error } = await supabase
+    .from('units')
+    .delete()
+    .eq('id', unitId);
+
+  if (error) throw error;
+}
+
+/* ---- Lessons CRUD ---- */
 
 export async function createLesson(
   unitId: string,
@@ -92,21 +177,49 @@ export async function createLesson(
   return data;
 }
 
+export async function updateLesson(lessonId: string, fields: { title?: string; lesson_order?: number }): Promise<ContentLesson> {
+  const { data, error } = await supabase
+    .from('lessons')
+    .update(fields)
+    .eq('id', lessonId)
+    .select('id, unit_id, title, lesson_order, video_url, pdf_url, created_at')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteLesson(lessonId: string): Promise<void> {
+  const { error } = await supabase
+    .from('lessons')
+    .delete()
+    .eq('id', lessonId);
+
+  if (error) throw error;
+}
+
 export interface UnitWithLessons extends ContentUnit {
   lessons: ContentLesson[];
 }
 
-export async function fetchUnitsWithLessons(): Promise<UnitWithLessons[]> {
-  const { data, error } = await supabase
+export async function fetchUnitsWithLessons(gradeId?: string): Promise<UnitWithLessons[]> {
+  let query = supabase
     .from('units')
-    .select('id, title, unit_order, created_at, lessons(id, unit_id, title, lesson_order, video_url, pdf_url, created_at, lesson_resources(id, lesson_id, resource_type, title, url, resource_order, created_at))')
+    .select('id, title, unit_order, grade_id, created_at, lessons(id, unit_id, title, lesson_order, video_url, pdf_url, created_at, lesson_resources(id, lesson_id, resource_type, title, url, resource_order, created_at))')
     .order('unit_order', { ascending: true });
+
+  if (gradeId) {
+    query = query.eq('grade_id', gradeId);
+  }
+
+  const { data, error } = query;
 
   if (error) throw error;
   return (data ?? []).map((u) => ({
     id: u.id,
     title: u.title,
     unit_order: u.unit_order,
+    grade_id: u.grade_id,
     created_at: u.created_at,
     lessons: (u.lessons ?? [])
       .sort((a: ContentLesson, b: ContentLesson) => a.lesson_order - b.lesson_order)
@@ -117,21 +230,6 @@ export async function fetchUnitsWithLessons(): Promise<UnitWithLessons[]> {
         ),
       })),
   }));
-}
-
-export async function updateLessonContent(
-  lessonId: string,
-  fields: { video_url?: string | null; pdf_url?: string | null },
-): Promise<ContentLesson> {
-  const { data, error } = await supabase
-    .from('lessons')
-    .update(fields)
-    .eq('id', lessonId)
-    .select('id, unit_id, title, lesson_order, video_url, pdf_url, created_at')
-    .single();
-
-  if (error) throw error;
-  return data;
 }
 
 /* ---- Lesson Resources CRUD ---- */
