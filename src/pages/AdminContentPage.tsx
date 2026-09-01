@@ -1154,9 +1154,35 @@ function ResourceRow({
 }) {
   return (
     <div className="rounded-xl border border-secondary-100 p-3">
-      <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-soft text-[11px] font-black text-primary">{resourceNumber}</span>
-        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconClass}`}>{icon}</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-soft text-[11px] font-black text-primary">{resourceNumber}</span>
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconClass}`}>{icon}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onPreview}
+            disabled={!canPreview}
+            className={`shrink-0 rounded-lg p-2 transition disabled:opacity-40 ${isPreviewOpen ? 'bg-secondary-50 text-secondary' : 'text-secondary-400 hover:bg-secondary-50 hover:text-secondary'}`}
+            aria-label="معاينة"
+            title="معاينة"
+          >
+            <Eye className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={draft.saving}
+            className="shrink-0 rounded-lg p-2 text-red-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+            aria-label="حذف"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+      <div className="mt-2">
+        <label className="mb-1 block text-[11px] font-bold text-muted">العنوان</label>
         <input
           type="text"
           value={draft.title}
@@ -1164,25 +1190,6 @@ function ResourceRow({
           placeholder="العنوان"
           className={`${INPUT_CLASS} text-xs`}
         />
-        <button
-          type="button"
-          onClick={onPreview}
-          disabled={!canPreview}
-          className={`shrink-0 rounded-lg p-2 transition disabled:opacity-40 ${isPreviewOpen ? 'bg-secondary-50 text-secondary' : 'text-secondary-400 hover:bg-secondary-50 hover:text-secondary'}`}
-          aria-label="معاينة"
-          title="معاينة"
-        >
-          <Eye className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={draft.saving}
-          className="shrink-0 rounded-lg p-2 text-red-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-          aria-label="حذف"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
       </div>
       <div className="mt-2 flex items-center gap-2">
         <input
