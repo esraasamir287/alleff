@@ -214,7 +214,7 @@ function DashboardContent({ activeView, packageDetails, status, userName, units,
   }, [activeUnit, units]);
 
   if (activeView === 'homework') {
-    return <HomeworkView firstName={firstName} />;
+    return <HomeworkView firstName={firstName} units={units} />;
   }
 
   return (
@@ -237,7 +237,7 @@ function DashboardContent({ activeView, packageDetails, status, userName, units,
       <div className="mb-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard icon={<BookOpen />} iconClass="bg-orange-50 text-orange-500" label="الدروس" value={String(totalLessons)} detail={totalLessons === 1 ? 'درس واحد' : 'دروس متاحة'} />
         <StatCard icon={<CheckCircle2 />} iconClass="bg-emerald-50 text-emerald-500" label="الاختبارات" value={String(attemptCount)} detail={attemptCount === 1 ? 'اختبار مُكتمل' : 'اختبار مُكتمل'} />
-        <StatCard icon={<FileText />} iconClass="bg-blue-50 text-blue-500" label="الواجبات" value="0" detail="لا توجد مهام حالياً" />
+        <StatCard icon={<FileText />} iconClass="bg-blue-50 text-blue-500" label="الواجبات" value={String(collectHomework(units).length)} detail={collectHomework(units).length === 0 ? 'لا توجد مهام حالياً' : 'واجب متاح'} />
         <StatCard icon={<BarChart3 />} iconClass="bg-violet-50 text-violet-500" label="نسبة التقدم" value="0%" detail="ابدأ أول درس" progress />
       </div>
 
@@ -253,12 +253,53 @@ function DashboardContent({ activeView, packageDetails, status, userName, units,
   );
 }
 
-function HomeworkView({ firstName }: { firstName: string }) {
-  const [selectedFiles, setSelectedFiles] = useState<{ name: string; size: string; type: 'image' | 'pdf' }[]>([
-    { name: 'إجاباتي.pdf', size: '2.1 MB', type: 'pdf' },
-    { name: 'صورة 2.jpg', size: '1.5 MB', type: 'image' },
-    { name: 'صورة 1.jpg', size: '1.2 MB', type: 'image' },
-  ]);
+interface HomeworkItem {
+  id: string;
+  title: string;
+  instructions: string;
+  due_date: string | null;
+  lessonTitle: string;
+  lessonOrder: number;
+  unitTitle: string;
+}
+
+function collectHomework(units: Unit[]): HomeworkItem[] {
+  const items: HomeworkItem[] = [];
+  for (const unit of units) {
+    for (const lesson of unit.lessons) {
+      const hw = lesson.lesson_homework;
+      if (hw) {
+        items.push({
+          id: hw.id,
+          title: hw.title,
+          instructions: hw.instructions || '',
+          due_date: hw.due_date,
+          lessonTitle: lesson.title,
+          lessonOrder: lesson.lesson_order,
+          unitTitle: unit.title,
+        });
+      }
+    }
+  }
+  return items;
+}
+
+function formatDueDate(dueDate: string | null): string {
+  if (!dueDate) return 'بدون موعد';
+  try {
+    const d = new Date(dueDate);
+    return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+  } catch {
+    return dueDate;
+  }
+}
+
+function HomeworkView({ firstName, units }: { firstName: string; units: Unit[] }) {
+  const [selectedFiles, setSelectedFiles] = useState<{ name: string; size: string; type: 'image' | 'pdf' }[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const homeworkItems = collectHomework(units);
+  const selected = homeworkItems.find((h) => h.id === selectedId) ?? homeworkItems[0] ?? null;
 
   function handleFiles(files: FileList | null) {
     if (!files) return;
@@ -286,37 +327,59 @@ function HomeworkView({ firstName }: { firstName: string }) {
         </div>
       </section>
 
-      <div className="mb-5 flex items-center justify-between"><h2 className="text-xl font-black text-[#211b60]">الواجبات</h2><span className="rounded-full bg-[#f0ebff] px-3 py-1 text-xs font-extrabold text-[#6840d4]">2 واجبات</span></div>
-      <div className="mb-5 grid gap-4 md:grid-cols-2">
-        <HomeworkCard title="واجب الدرس الأول" dueDate="2 يونيو 2025" status="مسلّم" active={false} />
-        <HomeworkCard title="واجب الدرس الثاني" dueDate="9 يونيو 2025" status="قيد التسليم" active />
-      </div>
+      <div className="mb-5 flex items-center justify-between"><h2 className="text-xl font-black text-[#211b60]">الواجبات</h2><span className="rounded-full bg-[#f0ebff] px-3 py-1 text-xs font-extrabold text-[#6840d4]">{homeworkItems.length} واجبات</span></div>
 
-      <section className="overflow-hidden rounded-3xl border border-[#e9e6f5] bg-white shadow-[0_8px_30px_rgba(73,52,145,0.04)]">
-        <div className="flex flex-col gap-3 border-b border-[#eeebf8] bg-gradient-to-l from-[#faf7ff] to-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-          <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#eee5ff] text-[#7040db]"><BookOpen className="h-5 w-5" /></span><h3 className="text-lg font-black text-[#211b60]">واجب الدرس الأول</h3></div>
-          <div className="flex items-center gap-4 text-xs font-bold text-[#8d89a5]"><span className="inline-flex items-center gap-1.5"><CalendarDays className="h-4 w-4 text-[#6941d3]" />تاريخ التسليم: 2 يونيو 2025 - 11:59 م</span><span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">مسلّم</span></div>
+      {homeworkItems.length === 0 ? (
+        <div className="mb-5 rounded-2xl border border-[#e9e6f5] bg-white px-5 py-10 text-center text-sm font-bold text-[#9793ad]">لا توجد واجبات منشورة حالياً.</div>
+      ) : (
+        <div className="mb-5 grid gap-4 md:grid-cols-2">
+          {homeworkItems.map((hw) => (
+            <HomeworkCard
+              key={hw.id}
+              title={hw.title}
+              lessonTitle={hw.lessonTitle}
+              dueDate={formatDueDate(hw.due_date)}
+              active={selected?.id === hw.id}
+              onClick={() => { setSelectedId(hw.id); setSelectedFiles([]); }}
+            />
+          ))}
         </div>
-        <div className="grid gap-7 p-5 sm:p-7 lg:grid-cols-[1fr_1.05fr]">
-          <div className="order-2 lg:order-1">
-            <div className="rounded-2xl border-2 border-dashed border-[#d8c4ff] bg-[#fcfaff] px-5 py-6 text-center">
-              <Upload className="mx-auto h-9 w-9 text-[#7040db]" />
-              <p className="mt-3 text-sm font-extrabold text-[#4b378e]">اسحب وأفلت الصور هنا</p><p className="mt-1 text-xs font-bold text-[#9793ad]">أو اختر ملفات من جهازك</p><p className="mt-2 text-[11px] font-semibold text-[#aaa6ba]">يمكنك رفع عدة صور أو ملف PDF واحد</p>
-              <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[#6840d4] px-4 py-2.5 text-xs font-extrabold text-white shadow-[0_8px_18px_rgba(104,64,212,0.2)] transition hover:bg-[#5831c1]"><Upload className="h-4 w-4" />رفع الملفات<input type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={(event) => handleFiles(event.target.files)} /></label>
-              <div className="mt-3 flex justify-center gap-2"><label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#dcd0fa] bg-white px-3 py-2 text-[11px] font-extrabold text-[#6840d4]"><ImagePlus className="h-3.5 w-3.5" />اختيار صور<input type="file" multiple accept="image/*" className="hidden" onChange={(event) => handleFiles(event.target.files)} /></label><label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#dcd0fa] bg-white px-3 py-2 text-[11px] font-extrabold text-[#6840d4]"><FileText className="h-3.5 w-3.5" />اختيار PDF<input type="file" accept="application/pdf" className="hidden" onChange={(event) => handleFiles(event.target.files)} /></label></div>
-            </div>
-            <p className="mt-3 text-center text-[11px] font-semibold text-[#aaa6ba]">الصيغ المدعومة: JPG, JPEG, PNG, PDF <span className="mx-1">•</span> الحد الأقصى لحجم الملف: 10 MB</p>
+      )}
+
+      {selected && (
+        <section className="overflow-hidden rounded-3xl border border-[#e9e6f5] bg-white shadow-[0_8px_30px_rgba(73,52,145,0.04)]">
+          <div className="flex flex-col gap-3 border-b border-[#eeebf8] bg-gradient-to-l from-[#faf7ff] to-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+            <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#eee5ff] text-[#7040db]"><BookOpen className="h-5 w-5" /></span><h3 className="text-lg font-black text-[#211b60]">{selected.title}</h3></div>
+            <div className="flex items-center gap-4 text-xs font-bold text-[#8d89a5]"><span className="inline-flex items-center gap-1.5"><CalendarDays className="h-4 w-4 text-[#6941d3]" />تاريخ التسليم: {formatDueDate(selected.due_date)}</span></div>
           </div>
-          <div className="order-1 text-right lg:order-2"><h4 className="text-base font-black text-[#5534b8]">تعليمات الواجب</h4><p className="mt-3 text-sm font-semibold leading-8 text-[#77739c]">بعد دراستك للدرس، أجب عن الأسئلة في دفترك. ثم قم برفع الصور بوضوح أو ارفع ملف PDF واحد يحتوي على إجاباتك. تأكد من أن الصور واضحة ومقروءة.</p><div className="mt-4 rounded-xl border border-[#dfd0ff] bg-[#faf7ff] px-4 py-3 text-xs font-extrabold leading-6 text-[#6840d4]"><Sparkles className="ml-1 inline h-4 w-4" />شدّي حيلك، ارفع واجبك قبل الموعد!</div><h4 className="mt-5 text-sm font-black text-[#5534b8]">الملفات المرفقة ({selectedFiles.length})</h4><div className="mt-3 grid gap-2 sm:grid-cols-3">{selectedFiles.map((file, index) => <div key={`${file.name}-${index}`} className="relative rounded-xl border border-[#e7e0f7] bg-white p-2 text-center"><button type="button" onClick={() => setSelectedFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))} className="absolute left-1.5 top-1.5 rounded-full bg-[#f4efff] p-1 text-[#8a75c9] hover:bg-red-50 hover:text-red-500"><X className="h-3 w-3" /></button><span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-lg ${file.type === 'pdf' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{file.type === 'pdf' ? <FileText className="h-6 w-6" /> : <ImagePlus className="h-6 w-6" />}</span><p className="mt-2 truncate text-[10px] font-extrabold text-[#4b4676]">{file.name}</p><p className="mt-1 text-[10px] font-bold text-[#aaa6ba]">{file.size}</p></div>)}</div></div>
-        </div>
-        <div className="flex flex-col-reverse gap-3 border-t border-[#eeebf8] px-5 py-5 sm:flex-row sm:items-center sm:justify-start sm:px-7"><button type="button" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#6840d4] px-6 py-3 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(104,64,212,0.2)] transition hover:bg-[#5831c1]"><Send className="h-4 w-4" />تسليم الواجب</button><button type="button" onClick={() => setSelectedFiles([])} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#b9a3ff] bg-white px-5 py-3 text-sm font-extrabold text-[#6840d4] transition hover:bg-[#faf7ff]"><FileDown className="h-4 w-4" />حفظ كمسودة</button></div>
-      </section>
+          <div className="grid gap-7 p-5 sm:p-7 lg:grid-cols-[1fr_1.05fr]">
+            <div className="order-2 lg:order-1">
+              <div className="rounded-2xl border-2 border-dashed border-[#d8c4ff] bg-[#fcfaff] px-5 py-6 text-center">
+                <Upload className="mx-auto h-9 w-9 text-[#7040db]" />
+                <p className="mt-3 text-sm font-extrabold text-[#4b378e]">اسحب وأفلت الصور هنا</p><p className="mt-1 text-xs font-bold text-[#9793ad]">أو اختر ملفات من جهازك</p><p className="mt-2 text-[11px] font-semibold text-[#aaa6ba]">يمكنك رفع عدة صور أو ملف PDF واحد</p>
+                <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[#6840d4] px-4 py-2.5 text-xs font-extrabold text-white shadow-[0_8px_18px_rgba(104,64,212,0.2)] transition hover:bg-[#5831c1]"><Upload className="h-4 w-4" />رفع الملفات<input type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={(event) => handleFiles(event.target.files)} /></label>
+                <div className="mt-3 flex justify-center gap-2"><label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#dcd0fa] bg-white px-3 py-2 text-[11px] font-extrabold text-[#6840d4]"><ImagePlus className="h-3.5 w-3.5" />اختيار صور<input type="file" multiple accept="image/*" className="hidden" onChange={(event) => handleFiles(event.target.files)} /></label><label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#dcd0fa] bg-white px-3 py-2 text-[11px] font-extrabold text-[#6840d4]"><FileText className="h-3.5 w-3.5" />اختيار PDF<input type="file" accept="application/pdf" className="hidden" onChange={(event) => handleFiles(event.target.files)} /></label></div>
+              </div>
+              <p className="mt-3 text-center text-[11px] font-semibold text-[#aaa6ba]">الصيغ المدعومة: JPG, JPEG, PNG, PDF <span className="mx-1">•</span> الحد الأقصى لحجم الملف: 10 MB</p>
+            </div>
+            <div className="order-1 text-right lg:order-2">
+              <div className="mb-3 rounded-xl bg-[#f6f3ff] px-4 py-2.5 text-xs font-extrabold text-[#5834c6]">الدرس {selected.lessonOrder}: {selected.lessonTitle} — {selected.unitTitle}</div>
+              <h4 className="text-base font-black text-[#5534b8]">تعليمات الواجب</h4>
+              <p className="mt-3 text-sm font-semibold leading-8 text-[#77739c]">{selected.instructions || 'لا توجد تعليمات إضافية.'}</p>
+              <div className="mt-4 rounded-xl border border-[#dfd0ff] bg-[#faf7ff] px-4 py-3 text-xs font-extrabold leading-6 text-[#6840d4]"><Sparkles className="ml-1 inline h-4 w-4" />شدّي حيلك، ارفع واجبك قبل الموعد!</div>
+              <h4 className="mt-5 text-sm font-black text-[#5534b8]">الملفات المرفقة ({selectedFiles.length})</h4>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">{selectedFiles.map((file, index) => <div key={`${file.name}-${index}`} className="relative rounded-xl border border-[#e7e0f7] bg-white p-2 text-center"><button type="button" onClick={() => setSelectedFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))} className="absolute left-1.5 top-1.5 rounded-full bg-[#f4efff] p-1 text-[#8a75c9] hover:bg-red-50 hover:text-red-500"><X className="h-3 w-3" /></button><span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-lg ${file.type === 'pdf' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{file.type === 'pdf' ? <FileText className="h-6 w-6" /> : <ImagePlus className="h-6 w-6" />}</span><p className="mt-2 truncate text-[10px] font-extrabold text-[#4b4676]">{file.name}</p><p className="mt-1 text-[10px] font-bold text-[#aaa6ba]">{file.size}</p></div>)}</div>
+            </div>
+          </div>
+          <div className="flex flex-col-reverse gap-3 border-t border-[#eeebf8] px-5 py-5 sm:flex-row sm:items-center sm:justify-start sm:px-7"><button type="button" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#6840d4] px-6 py-3 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(104,64,212,0.2)] transition hover:bg-[#5831c1]"><Send className="h-4 w-4" />تسليم الواجب</button><button type="button" onClick={() => setSelectedFiles([])} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#b9a3ff] bg-white px-5 py-3 text-sm font-extrabold text-[#6840d4] transition hover:bg-[#faf7ff]"><FileDown className="h-4 w-4" />حفظ كمسودة</button></div>
+        </section>
+      )}
     </div>
   );
 }
 
-function HomeworkCard({ title, dueDate, status, active }: { title: string; dueDate: string; status: string; active: boolean }) {
-  return <button type="button" className={`flex items-center justify-between rounded-2xl border bg-white px-5 py-4 text-right shadow-[0_5px_20px_rgba(73,52,145,0.03)] transition hover:-translate-y-0.5 hover:shadow-md ${active ? 'border-[#e2d6ff]' : 'border-[#e9e6f5]'}`}><div><h4 className="text-sm font-black text-[#302769]">{title}</h4><p className="mt-2 text-xs font-bold text-[#aaa6ba]">تاريخ التسليم: {dueDate}</p></div><div className="flex items-center gap-3"><span className={`rounded-full border px-3 py-1 text-[11px] font-extrabold ${active ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{status}</span><ChevronLeft className="h-4 w-4 text-[#8d7bd0]" /></div></button>;
+function HomeworkCard({ title, lessonTitle, dueDate, active, onClick }: { title: string; lessonTitle: string; dueDate: string; active: boolean; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className={`flex items-center justify-between rounded-2xl border bg-white px-5 py-4 text-right shadow-[0_5px_20px_rgba(73,52,145,0.03)] transition hover:-translate-y-0.5 hover:shadow-md ${active ? 'border-[#e2d6ff]' : 'border-[#e9e6f5]'}`}><div><h4 className="text-sm font-black text-[#302769]">{title}</h4><p className="mt-1 text-[11px] font-bold text-[#9793ad]">{lessonTitle}</p><p className="mt-2 text-xs font-bold text-[#aaa6ba]">تاريخ التسليم: {dueDate}</p></div><div className="flex items-center gap-3"><span className={`rounded-full border px-3 py-1 text-[11px] font-extrabold ${active ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-[#e2d6ff] bg-[#f6f3ff] text-[#6840d4]'}`}>{active ? 'قيد التسليم' : 'بانتظارك'}</span><ChevronLeft className="h-4 w-4 text-[#8d7bd0]" /></div></button>;
 }
 
 function StatCard({ icon, iconClass, label, value, detail, progress }: { icon: ReactNode; iconClass: string; label: string; value: string; detail: string; progress?: boolean }) {
