@@ -33,7 +33,8 @@ export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
           <iframe
             src={embedUrl}
             className="aspect-video w-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
             allowFullScreen
             title={title ?? 'فيديو الشرح'}
           />

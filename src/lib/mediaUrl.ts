@@ -9,6 +9,10 @@ export interface VideoEmbed {
 
 const DIRECT_VIDEO_EXTS = ['.mp4', '.webm', '.ogg', '.mov', '.m4v'];
 
+function youtubeEmbedUrl(videoId: string): string {
+  return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`;
+}
+
 export function parseVideoUrl(url: string): VideoEmbed {
   const trimmed = url.trim();
   if (!trimmed) return { kind: 'unknown', embedUrl: null };
@@ -20,7 +24,7 @@ export function parseVideoUrl(url: string): VideoEmbed {
     if (host === 'youtu.be') {
       const id = u.pathname.slice(1).split('/')[0];
       return id
-        ? { kind: 'youtube', embedUrl: `https://www.youtube.com/embed/${id}` }
+        ? { kind: 'youtube', embedUrl: youtubeEmbedUrl(id) }
         : { kind: 'unknown', embedUrl: null };
     }
 
@@ -32,7 +36,10 @@ export function parseVideoUrl(url: string): VideoEmbed {
           : { kind: 'unknown', embedUrl: null };
       }
       if (u.pathname.startsWith('/embed/')) {
-        return { kind: 'youtube', embedUrl: trimmed };
+        const id = u.pathname.slice('/embed/'.length).split('/')[0];
+        return id
+          ? { kind: 'youtube', embedUrl: youtubeEmbedUrl(id) }
+          : { kind: 'unknown', embedUrl: null };
       }
     }
 
@@ -100,3 +107,6 @@ export function parsePdfUrl(url: string): PdfEmbed {
     return { kind: 'unknown', embedUrl: null };
   }
 }
+
+
+export { parsePdfUrl }
