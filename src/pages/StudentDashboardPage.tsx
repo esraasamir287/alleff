@@ -205,10 +205,6 @@ function DashboardContent({ activeView, packageDetails, status, userName, units,
 
   const totalLessons = units.reduce((sum, u) => sum + u.lessons.length, 0);
 
-  if (activeView === 'homework') {
-    return <HomeworkView firstName={firstName} />;
-  }
-
   useEffect(() => {
     if (units.length > 0 && units[activeUnit]?.lessons[0]) {
       setOpenLesson(units[activeUnit].lessons[0].id);
@@ -216,6 +212,10 @@ function DashboardContent({ activeView, packageDetails, status, userName, units,
       setOpenLesson(null);
     }
   }, [activeUnit, units]);
+
+  if (activeView === 'homework') {
+    return <HomeworkView firstName={firstName} />;
+  }
 
   return (
     <div className="mx-auto max-w-5xl">
