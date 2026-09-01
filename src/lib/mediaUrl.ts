@@ -12,7 +12,7 @@ export interface VideoEmbed {
 const DIRECT_VIDEO_EXTS = ['.mp4', '.webm', '.ogg', '.mov', '.m4v'];
 
 function youtubeEmbedUrl(videoId: string): string {
-  return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`;
+  return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`;
 }
 
 function youtubeThumbnail(videoId: string): string {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, ExternalLink, PlayCircle, X, Youtube } from 'lucide-react';
 import { parseVideoUrl } from '../../lib/mediaUrl';
 
@@ -8,9 +8,13 @@ interface VideoPlayerProps {
   onClose?: () => void;
 }
 
+const FALLBACK_TIMEOUT_MS = 5000;
+
 export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
   const { kind, embedUrl, thumbnailUrl } = parseVideoUrl(videoUrl);
   const [playing, setPlaying] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const loadedRef = useRef(false);
 
   const watchUrl = videoUrl.trim();
 
@@ -22,6 +26,21 @@ export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
 
     return url.toString();
   })();
+
+  useEffect(() => {
+    if (!playing) {
+      loadedRef.current = false;
+      setFailed(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      if (!loadedRef.current) setFailed(true);
+    }, FALLBACK_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [playing]);
+
+  const showFallback = failed && (kind === 'youtube' || kind === 'vimeo' || kind === 'drive');
 
   return (
     <div className="mt-3 overflow-hidden rounded-2xl border border-[#e1d7ff] bg-white shadow-sm">
@@ -42,16 +61,34 @@ export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
       </div>
 
       <div dir="ltr" className="w-full bg-black">
-        {playing && (kind === 'youtube' || kind === 'vimeo' || kind === 'drive') && autoplayEmbed ? (
+        {playing && (kind === 'youtube' || kind === 'vimeo' || kind === 'drive') && autoplayEmbed && !showFallback ? (
           <div className="relative aspect-video w-full">
             <iframe
               src={autoplayEmbed}
               className="absolute inset-0 h-full w-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
               title={title ?? 'فيديو الشرح'}
+              onLoad={() => { loadedRef.current = true; }}
             />
+          </div>
+        ) : showFallback ? (
+          <div className="relative flex aspect-video w-full flex-col items-center justify-center gap-4 bg-gradient-to-br from-[#1a1a2e] to-[#16213e] text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 shadow-lg">
+              <PlayCircle className="h-7 w-7 text-white" />
+            </span>
+            <p className="max-w-sm px-6 text-sm font-medium leading-relaxed text-white/90">
+              تعذّر تشغيل الفيديو داخل الموقع. يمكنك مشاهدته مباشرة على يوتيوب.
+            </p>
+            <a
+              href={watchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:bg-red-500"
+            >
+              <Youtube className="h-4 w-4" />
+              افتح على يوتيوب
+            </a>
           </div>
         ) : (kind === 'youtube' || kind === 'vimeo' || kind === 'drive') && embedUrl ? (
           <button
