@@ -278,20 +278,78 @@ function buildResources(lesson: LessonItem): DisplayResource[] {
 function LessonContent({ lesson }: { lesson: LessonItem }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const resources = buildResources(lesson);
+  const videos = resources.filter((resource) => resource.type === 'video');
+  const pdfs = resources.filter((resource) => resource.type === 'pdf');
 
   if (resources.length === 0) {
     return <div className="flex items-center justify-center gap-2 py-5 text-xs font-bold text-[#9691ad]">لا يوجد محتوى منشور لهذا الدرس بعد</div>;
   }
 
-  return <div className="border-t border-[#eeeaf8] px-4 py-2">{resources.map((res) => {
-    const isOpen = openId === res.id;
-    const isVideo = res.type === 'video';
-    return <div key={res.id}><LessonAction icon={isVideo ? <PlayCircle /> : <FileDown />} iconClass={isVideo ? 'bg-[#f0e8ff] text-[#6d3dda]' : 'bg-[#eaf9ed] text-[#27a454]'} title={res.title} subtitle={isVideo ? 'شرح بالفيديو' : 'ملف PDF'} action={isOpen ? 'إخفاء' : (isVideo ? 'مشاهدة' : 'عرض المذكرة')} actionClass={isVideo ? 'bg-[#f0e8ff] text-[#6c39d0]' : 'bg-[#e8f9ec] text-[#249e4b]'} onAction={() => setOpenId(isOpen ? null : res.id)} />{isOpen && (isVideo ? <VideoPlayer videoUrl={res.url} title={`الدرس ${lesson.lesson_order}: ${lesson.title} — ${res.title}`} onClose={() => setOpenId(null)} /> : <PdfViewer pdfUrl={res.url} title={`الدرس ${lesson.lesson_order}: ${lesson.title} — ${res.title}`} onClose={() => setOpenId(null)} />)}</div>;
-  })}</div>;
+  return (
+    <div className="border-t border-[#eeeaf8] px-4 py-4 sm:px-5">
+      <div className="flex flex-col gap-4">
+        {videos.length > 0 && (
+          <ResourceGroup
+            resources={videos}
+            lesson={lesson}
+            openId={openId}
+            onToggle={(id) => setOpenId(openId === id ? null : id)}
+            onClose={() => setOpenId(null)}
+            type="video"
+          />
+        )}
+        {pdfs.length > 0 && (
+          <ResourceGroup
+            resources={pdfs}
+            lesson={lesson}
+            openId={openId}
+            onToggle={(id) => setOpenId(openId === id ? null : id)}
+            onClose={() => setOpenId(null)}
+            type="pdf"
+          />
+        )}
+      </div>
+    </div>
+  );
 }
 
-function LessonAction({ icon, iconClass, title, subtitle, action, actionClass, onAction }: { icon: ReactNode; iconClass: string; title: string; subtitle: string; action: string; actionClass: string; onAction?: () => void }) {
-  return <div className="flex items-center gap-3 border-b border-[#f0edf8] py-3 last:border-0"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconClass}`}>{icon}</span><div className="min-w-0 flex-1"><p className="text-xs font-extrabold text-[#3c3672]">{title}</p><p className="mt-0.5 truncate text-[11px] font-semibold text-[#a09cb2]">{subtitle}</p></div><button type="button" onClick={onAction} className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-extrabold transition hover:brightness-95 ${actionClass}`}>{action}</button></div>;
+function ResourceGroup({ resources, lesson, openId, onToggle, onClose, type }: { resources: DisplayResource[]; lesson: LessonItem; openId: string | null; onToggle: (id: string) => void; onClose: () => void; type: DisplayResource['type'] }) {
+  const isVideo = type === 'video';
+  return (
+    <section className={`overflow-hidden rounded-2xl border ${isVideo ? 'border-[#e5d9ff]' : 'border-[#d9f0df]'}`}>
+      <div className={`flex items-center justify-between px-4 py-3 ${isVideo ? 'bg-[#f7f2ff]' : 'bg-[#f3fbf5]'}`}>
+        <div className="flex items-center gap-2">
+          {isVideo ? <PlayCircle className="h-4 w-4 text-[#6d3dda]" /> : <FileText className="h-4 w-4 text-[#27a454]" />}
+          <h4 className={`text-xs font-black ${isVideo ? 'text-[#5a32b9]' : 'text-[#208b43]'}`}>{isVideo ? 'فيديوهات الدرس' : 'مذكرات الدرس'}</h4>
+        </div>
+        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${isVideo ? 'bg-[#eadfff] text-[#6d3dda]' : 'bg-[#dff5e5] text-[#208b43]'}`}>{resources.length}</span>
+      </div>
+      <div className="divide-y divide-[#f0edf8] bg-white px-3">
+        {resources.map((resource, index) => {
+          const isOpen = openId === resource.id;
+          return (
+            <div key={resource.id}>
+              <LessonAction
+                number={index + 1}
+                icon={isVideo ? <PlayCircle /> : <FileDown />}
+                iconClass={isVideo ? 'bg-[#f0e8ff] text-[#6d3dda]' : 'bg-[#eaf9ed] text-[#27a454]'}
+                title={resource.title}
+                subtitle={isVideo ? 'شرح بالفيديو' : 'ملف PDF للتحميل والعرض'}
+                action={isOpen ? 'إخفاء' : (isVideo ? 'مشاهدة' : 'عرض')}
+                actionClass={isVideo ? 'bg-[#f0e8ff] text-[#6c39d0]' : 'bg-[#e8f9ec] text-[#249e4b]'}
+                onAction={() => onToggle(resource.id)}
+              />
+              {isOpen && (isVideo ? <VideoPlayer videoUrl={resource.url} title={`الدرس ${lesson.lesson_order}: ${lesson.title} — ${resource.title}`} onClose={onClose} /> : <PdfViewer pdfUrl={resource.url} title={`الدرس ${lesson.lesson_order}: ${lesson.title} — ${resource.title}`} onClose={onClose} />)}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function LessonAction({ number, icon, iconClass, title, subtitle, action, actionClass, onAction }: { number: number; icon: ReactNode; iconClass: string; title: string; subtitle: string; action: string; actionClass: string; onAction?: () => void }) {
+  return <div className="flex items-center gap-3 py-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f1eff8] text-[11px] font-black text-[#706a91]">{number}</span><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconClass}`}>{icon}</span><div className="min-w-0 flex-1"><p className="text-xs font-extrabold text-[#3c3672]">{title}</p><p className="mt-0.5 truncate text-[11px] font-semibold text-[#a09cb2]">{subtitle}</p></div><button type="button" onClick={onAction} className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-extrabold transition hover:brightness-95 ${actionClass}`}>{action}</button></div>;
 }
 
 function EmptyState({ title, text, action, to }: { title: string; text: string; action: string; to: string }) {

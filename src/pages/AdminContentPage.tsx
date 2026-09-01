@@ -454,12 +454,13 @@ export function AdminContentPage() {
                       <div className="flex flex-col gap-2">
                         {videoDrafts.length === 0 ? (
                           <p className="rounded-xl border border-dashed border-secondary-200 px-4 py-3 text-center text-[11px] font-bold text-muted">لا توجد فيديوهات. اضغط «فيديو» للإضافة.</p>
-                        ) : videoDrafts.map((draft) => {
+                        ) : videoDrafts.map((draft, resourceIndex) => {
                           const index = drafts.indexOf(draft);
                           return (
                             <div key={index}>
                               <ResourceRow
                                 draft={draft}
+                                resourceNumber={resourceIndex + 1}
                                 icon={<PlaySquare className="h-4 w-4 text-secondary" aria-hidden="true" />}
                                 iconClass="bg-secondary-50"
                                 onTitleChange={(val) => updateDraft(index, { title: val })}
@@ -496,12 +497,13 @@ export function AdminContentPage() {
                       <div className="flex flex-col gap-2">
                         {pdfDrafts.length === 0 ? (
                           <p className="rounded-xl border border-dashed border-red-200 px-4 py-3 text-center text-[11px] font-bold text-muted">لا توجد مذكرات. اضغط «PDF» للإضافة.</p>
-                        ) : pdfDrafts.map((draft) => {
+                        ) : pdfDrafts.map((draft, resourceIndex) => {
                           const index = drafts.indexOf(draft);
                           return (
                             <div key={index}>
                               <ResourceRow
                                 draft={draft}
+                                resourceNumber={resourceIndex + 1}
                                 icon={<FileText className="h-4 w-4 text-red-500" aria-hidden="true" />}
                                 iconClass="bg-red-50"
                                 onTitleChange={(val) => updateDraft(index, { title: val })}
@@ -603,6 +605,7 @@ export function AdminContentPage() {
 
 function ResourceRow({
   draft,
+  resourceNumber,
   icon,
   iconClass,
   onTitleChange,
@@ -614,6 +617,7 @@ function ResourceRow({
   canPreview,
 }: {
   draft: ResourceDraft;
+  resourceNumber: number;
   icon: React.ReactNode;
   iconClass: string;
   onTitleChange: (val: string) => void;
@@ -627,6 +631,7 @@ function ResourceRow({
   return (
     <div className="rounded-xl border border-secondary-100 p-3">
       <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-soft text-[11px] font-black text-primary">{resourceNumber}</span>
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconClass}`}>{icon}</span>
         <input
           type="text"
