@@ -1,24 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  AlertCircle,
-  BookOpen,
-  ClipboardCheck,
-  Edit3,
-  Eye,
-  FileText,
-  GraduationCap,
-  Info,
-  Layers,
-  Lightbulb,
-  Loader2,
-  PlaySquare,
-  Plus,
-  Save,
-  Search,
-  Trash2,
-  Upload,
-  X,
-} from 'lucide-react';
+import { AlertCircle, BookOpen, ClipboardCheck, CreditCard as Edit3, Eye, FileText, GraduationCap, Info, Layers, Lightbulb, Loader2, PlaySquare, Plus, Save, Search, Trash2, X } from 'lucide-react';
 import { AdminLayout } from '../components/admin/AdminLayout';
 import { VideoPlayer } from '../components/ui/VideoPlayer';
 import { PdfViewer } from '../components/ui/PdfViewer';
@@ -38,8 +19,12 @@ import {
   addLessonResource,
   updateLessonResource,
   deleteLessonResource,
+  fetchLessonHomework,
+  saveLessonHomework,
+  deleteLessonHomework,
   type ContentGrade,
   type ContentLesson,
+  type LessonHomework,
   type LessonResource,
   type LessonWithCount,
   type ResourceType,
@@ -937,24 +922,141 @@ function LessonResources({ lesson, onReload, onEditLesson, onDeleteLesson }: { l
         </div>
       </div>
 
-      {/* Placeholder rows */}
-      <div className="mt-5 flex flex-col gap-3">
-        <div className="flex items-center gap-3 rounded-xl border border-secondary-100 px-3 py-3 opacity-60">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50"><ClipboardCheck className="h-5 w-5 text-emerald-600" aria-hidden="true" /></span>
-          <div className="min-w-0 flex-1"><p className="text-xs font-extrabold text-primary">تقييم</p><p className="mt-1 truncate text-[11px] font-semibold text-muted">سيُضاف لاحقًا</p></div>
-          <span className="shrink-0 rounded-lg bg-secondary-50 px-3 py-2 text-[11px] font-extrabold text-muted">قريبًا</span>
-        </div>
-        <div className="flex items-center gap-3 rounded-xl border border-secondary-100 px-3 py-3 opacity-60">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50"><Upload className="h-5 w-5 text-amber-600" aria-hidden="true" /></span>
-          <div className="min-w-0 flex-1"><p className="text-xs font-extrabold text-primary">واجب</p><p className="mt-1 truncate text-[11px] font-semibold text-muted">سيُضاف لاحقًا</p></div>
-          <span className="shrink-0 rounded-lg bg-secondary-50 px-3 py-2 text-[11px] font-extrabold text-muted">قريبًا</span>
-        </div>
-      </div>
+      {/* Homework section */}
+      <HomeworkEditor lesson={lesson} onReload={onReload} />
 
       <div className="mt-5 flex items-start gap-3 rounded-xl bg-amber-50 px-4 py-3.5 text-xs font-bold leading-relaxed text-amber-800">
         <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
         <p><span className="font-extrabold">ملاحظة</span><br /><span className="font-semibold">كل فيديو أو ملف يتم حفظه على حدة. سيظهر للطالب فقط ما تم حفظه.</span></p>
       </div>
+    </div>
+  );
+}
+
+/* ----------------------------- Homework Editor ----------------------------- */
+
+function HomeworkEditor({ lesson, onReload }: { lesson: ContentLesson; onReload: () => void }) {
+  const [hwTitle, setHwTitle] = useState('');
+  const [hwInstructions, setHwInstructions] = useState('');
+  const [hwDueDate, setHwDueDate] = useState('');
+  const [hwExists, setHwExists] = useState(false);
+  const [hwDirty, setHwDirty] = useState(false);
+  const [hwSaving, setHwSaving] = useState(false);
+  const [hwError, setHwError] = useState<string | null>(null);
+  const [hwLoaded, setHwLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setHwLoaded(false);
+    setHwError(null);
+    void (async () => {
+      try {
+        const hw = await fetchLessonHomework(lesson.id);
+        if (cancelled) return;
+        if (hw) {
+          setHwTitle(hw.title);
+          setHwInstructions(hw.instructions || '');
+          setHwDueDate(hw.due_date ?? '');
+          setHwExists(true);
+        } else {
+          setHwTitle('');
+          setHwInstructions('');
+          setHwDueDate('');
+          setHwExists(false);
+        }
+        setHwDirty(false);
+        setHwLoaded(true);
+      } catch {
+        if (!cancelled) {
+          setHwError('تعذّر تحميل الواجب.');
+          setHwLoaded(true);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [lesson.id]);
+
+  function markDirty() { setHwDirty(true); }
+
+  async function handleSaveHomework() {
+    if (!hwTitle.trim()) { setHwError('يرجى إدخال عنوان الواجب'); return; }
+    setHwSaving(true);
+    setHwError(null);
+    try {
+      await saveLessonHomework(lesson.id, hwTitle.trim(), hwInstructions.trim(), hwDueDate || null);
+      setHwExists(true);
+      setHwDirty(false);
+      await onReload();
+    } catch {
+      setHwError('تعذّر حفظ الواجب. حاول مرة أخرى.');
+    } finally {
+      setHwSaving(false);
+    }
+  }
+
+  async function handleDeleteHomework() {
+    setHwSaving(true);
+    setHwError(null);
+    try {
+      await deleteLessonHomework(lesson.id);
+      setHwTitle('');
+      setHwInstructions('');
+      setHwDueDate('');
+      setHwExists(false);
+      setHwDirty(false);
+      await onReload();
+    } catch {
+      setHwError('تعذّر حذف الواجب. حاول مرة أخرى.');
+    } finally {
+      setHwSaving(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-secondary-100 p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ClipboardCheck className="h-4 w-4 text-amber-600" aria-hidden="true" />
+          <span className="text-xs font-extrabold text-primary">الواجب</span>
+          {hwExists && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-extrabold text-amber-700">منشور</span>}
+        </div>
+        {hwExists && !hwDirty && (
+          <button type="button" onClick={handleDeleteHomework} disabled={hwSaving} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-[11px] font-extrabold text-red-600 transition hover:bg-red-100 disabled:opacity-50">
+            {hwSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            حذف
+          </button>
+        )}
+      </div>
+
+      {hwError && <div className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] font-bold text-red-700">{hwError}</div>}
+
+      {!hwLoaded ? (
+        <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-secondary" aria-hidden="true" /></div>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          <div>
+            <label className="mb-1 block text-[11px] font-bold text-muted">عنوان الواجب</label>
+            <input type="text" value={hwTitle} onChange={(e) => { setHwTitle(e.target.value); markDirty(); }} placeholder="مثال: واجب الدرس الأول" className={INPUT_CLASS} />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-bold text-muted">التعليمات</label>
+            <textarea value={hwInstructions} onChange={(e) => { setHwInstructions(e.target.value); markDirty(); }} placeholder="اكتب تعليمات الواجب هنا..." rows={3} className={`${INPUT_CLASS} resize-none`} />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-bold text-muted">تاريخ التسليم</label>
+            <input type="date" value={hwDueDate} onChange={(e) => { setHwDueDate(e.target.value); markDirty(); }} className={INPUT_CLASS} />
+          </div>
+          {hwDirty && (
+            <div className="flex items-center justify-end gap-2">
+              <button type="button" onClick={() => { setHwDirty(false); void onReload(); }} disabled={hwSaving} className="rounded-lg px-3 py-2 text-[11px] font-extrabold text-muted transition hover:bg-soft">إلغاء</button>
+              <button type="button" onClick={handleSaveHomework} disabled={hwSaving} className="inline-flex items-center gap-1 rounded-lg bg-secondary px-3 py-2 text-[11px] font-extrabold text-white transition hover:bg-secondary-700 disabled:opacity-50">
+                {hwSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                حفظ الواجب
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

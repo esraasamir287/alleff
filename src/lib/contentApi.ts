@@ -28,6 +28,16 @@ export interface LessonResource {
   created_at: string;
 }
 
+export interface LessonHomework {
+  id: string;
+  lesson_id: string;
+  title: string;
+  instructions: string;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ContentLesson {
   id: string;
   unit_id: string;
@@ -37,6 +47,7 @@ export interface ContentLesson {
   pdf_url: string | null;
   created_at: string;
   lesson_resources?: LessonResource[];
+  lesson_homework?: LessonHomework | null;
 }
 
 export interface LessonWithCount extends ContentUnit {
@@ -117,7 +128,7 @@ export async function fetchUnitsWithLessonCount(gradeId?: string): Promise<Lesso
 export async function fetchLessonsByUnit(unitId: string): Promise<ContentLesson[]> {
   const { data, error } = await supabase
     .from('lessons')
-    .select('id, unit_id, title, lesson_order, video_url, pdf_url, created_at, lesson_resources(id, lesson_id, resource_type, title, url, resource_order, created_at)')
+    .select('id, unit_id, title, lesson_order, video_url, pdf_url, created_at, lesson_resources(id, lesson_id, resource_type, title, url, resource_order, created_at), lesson_homework(id, lesson_id, title, instructions, due_date, created_at, updated_at)')
     .eq('unit_id', unitId)
     .order('lesson_order', { ascending: true });
 
@@ -208,12 +219,12 @@ export async function fetchUnitsWithLessons(gradeId?: string): Promise<UnitWithL
   const response = gradeId
     ? await supabase
         .from('units')
-        .select('id, title, unit_order, grade_id, created_at, lessons(id, unit_id, title, lesson_order, video_url, pdf_url, created_at, lesson_resources(id, lesson_id, resource_type, title, url, resource_order, created_at))')
+        .select('id, title, unit_order, grade_id, created_at, lessons(id, unit_id, title, lesson_order, video_url, pdf_url, created_at, lesson_resources(id, lesson_id, resource_type, title, url, resource_order, created_at), lesson_homework(id, lesson_id, title, instructions, due_date, created_at, updated_at)))')
         .eq('grade_id', gradeId)
         .order('unit_order', { ascending: true })
     : await supabase
         .from('units')
-        .select('id, title, unit_order, grade_id, created_at, lessons(id, unit_id, title, lesson_order, video_url, pdf_url, created_at, lesson_resources(id, lesson_id, resource_type, title, url, resource_order, created_at))')
+        .select('id, title, unit_order, grade_id, created_at, lessons(id, unit_id, title, lesson_order, video_url, pdf_url, created_at, lesson_resources(id, lesson_id, resource_type, title, url, resource_order, created_at), lesson_homework(id, lesson_id, title, instructions, due_date, created_at, updated_at)))')
         .order('unit_order', { ascending: true });
 
   const { data, error } = response;
@@ -282,5 +293,58 @@ export async function deleteLessonResource(resourceId: string): Promise<void> {
     .delete()
     .eq('id', resourceId);
 
+  if (error) throw error;
+}
+
+/* ---- Lesson Homework CRUD ---- */
+
+export async function fetchLessonHomework(lessonId: string): Promise<LessonHomework | null> {
+  const { data, error } = await supabase
+    .from('lesson_homework')
+    .select('id, lesson_id, title, instructions, due_date, created_at, updated_at')
+    .eq('lesson_id', lessonId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function saveLessonHomework(
+  lessonId: string,
+  title: string,
+  instructions: string,
+  dueDate: string | null,
+): Promise<LessonHomework> {
+  const { data: existing } = await supabase
+    .from('lesson_homework')
+    .select('id')
+    .eq('lesson_id', lessonId)
+    .maybeSingle();
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from('lesson_homework')
+      .update({ title, instructions, due_date: dueDate, updated_at: new Date().toISOString() })
+      .eq('id', existing.id)
+      .select('id, lesson_id, title, instructions, due_date, created_at, updated_at')
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  const { data, error } = await supabase
+    .from('lesson_homework')
+    .insert({ lesson_id: lessonId, title, instructions, due_date: dueDate })
+    .select('id, lesson_id, title, instructions, due_date, created_at, updated_at')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteLessonHomework(lessonId: string): Promise<void> {
+  const { error } = await supabase
+    .from('lesson_homework')
+    .delete()
+    .eq('lesson_id', lessonId);
   if (error) throw error;
 }
