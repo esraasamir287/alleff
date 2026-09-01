@@ -32,11 +32,17 @@ export function parseVideoUrl(url: string): VideoEmbed {
       if (u.pathname === '/watch') {
         const id = u.searchParams.get('v');
         return id
-          ? { kind: 'youtube', embedUrl: `https://www.youtube.com/embed/${id}` }
+          ? { kind: 'youtube', embedUrl: youtubeEmbedUrl(id) }
           : { kind: 'unknown', embedUrl: null };
       }
       if (u.pathname.startsWith('/embed/')) {
         const id = u.pathname.slice('/embed/'.length).split('/')[0];
+        return id
+          ? { kind: 'youtube', embedUrl: youtubeEmbedUrl(id) }
+          : { kind: 'unknown', embedUrl: null };
+      }
+      if (u.pathname.startsWith('/shorts/')) {
+        const id = u.pathname.slice('/shorts/'.length).split('/')[0];
         return id
           ? { kind: 'youtube', embedUrl: youtubeEmbedUrl(id) }
           : { kind: 'unknown', embedUrl: null };
