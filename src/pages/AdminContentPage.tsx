@@ -3,6 +3,7 @@ import {
   AlertCircle,
   BookOpen,
   ClipboardCheck,
+  Eye,
   FileText,
   FolderOpen,
   GripVertical,
@@ -19,6 +20,8 @@ import {
   Save,
 } from 'lucide-react';
 import { AdminLayout } from '../components/admin/AdminLayout';
+import { VideoPlayer } from '../components/ui/VideoPlayer';
+import { PdfViewer } from '../components/ui/PdfViewer';
 import {
   fetchUnitsWithLessonCount,
   fetchLessonsByUnit,
@@ -107,6 +110,7 @@ export function AdminContentPage() {
 
   const [drafts, setDrafts] = useState<ResourceDraft[]>([]);
   const [resourceError, setResourceError] = useState<string | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   const loadUnits = useCallback(async () => {
     setLoading(true);
@@ -165,6 +169,7 @@ export function AdminContentPage() {
     } else {
       setDrafts([]);
     }
+    setPreviewIndex(null);
   }, [selectedLessonId, selectedLesson]);
 
   function openAddUnit() {
@@ -452,16 +457,27 @@ export function AdminContentPage() {
                         ) : videoDrafts.map((draft) => {
                           const index = drafts.indexOf(draft);
                           return (
-                            <ResourceRow
-                              key={index}
-                              draft={draft}
-                              icon={<PlaySquare className="h-4 w-4 text-secondary" aria-hidden="true" />}
-                              iconClass="bg-secondary-50"
-                              onTitleChange={(val) => updateDraft(index, { title: val })}
-                              onUrlChange={(val) => updateDraft(index, { url: val })}
-                              onSave={() => saveDraft(index)}
-                              onDelete={() => deleteDraft(index)}
-                            />
+                            <div key={index}>
+                              <ResourceRow
+                                draft={draft}
+                                icon={<PlaySquare className="h-4 w-4 text-secondary" aria-hidden="true" />}
+                                iconClass="bg-secondary-50"
+                                onTitleChange={(val) => updateDraft(index, { title: val })}
+                                onUrlChange={(val) => updateDraft(index, { url: val })}
+                                onSave={() => saveDraft(index)}
+                                onDelete={() => deleteDraft(index)}
+                                onPreview={() => setPreviewIndex(previewIndex === index ? null : index)}
+                                isPreviewOpen={previewIndex === index}
+                                canPreview={!!draft.url.trim() && !draft.dirty}
+                              />
+                              {previewIndex === index && draft.url.trim() && (
+                                <VideoPlayer
+                                  videoUrl={draft.url.trim()}
+                                  title={draft.title}
+                                  onClose={() => setPreviewIndex(null)}
+                                />
+                              )}
+                            </div>
                           );
                         })}
                       </div>
@@ -483,16 +499,27 @@ export function AdminContentPage() {
                         ) : pdfDrafts.map((draft) => {
                           const index = drafts.indexOf(draft);
                           return (
-                            <ResourceRow
-                              key={index}
-                              draft={draft}
-                              icon={<FileText className="h-4 w-4 text-red-500" aria-hidden="true" />}
-                              iconClass="bg-red-50"
-                              onTitleChange={(val) => updateDraft(index, { title: val })}
-                              onUrlChange={(val) => updateDraft(index, { url: val })}
-                              onSave={() => saveDraft(index)}
-                              onDelete={() => deleteDraft(index)}
-                            />
+                            <div key={index}>
+                              <ResourceRow
+                                draft={draft}
+                                icon={<FileText className="h-4 w-4 text-red-500" aria-hidden="true" />}
+                                iconClass="bg-red-50"
+                                onTitleChange={(val) => updateDraft(index, { title: val })}
+                                onUrlChange={(val) => updateDraft(index, { url: val })}
+                                onSave={() => saveDraft(index)}
+                                onDelete={() => deleteDraft(index)}
+                                onPreview={() => setPreviewIndex(previewIndex === index ? null : index)}
+                                isPreviewOpen={previewIndex === index}
+                                canPreview={!!draft.url.trim() && !draft.dirty}
+                              />
+                              {previewIndex === index && draft.url.trim() && (
+                                <PdfViewer
+                                  pdfUrl={draft.url.trim()}
+                                  title={draft.title}
+                                  onClose={() => setPreviewIndex(null)}
+                                />
+                              )}
+                            </div>
                           );
                         })}
                       </div>
@@ -582,6 +609,9 @@ function ResourceRow({
   onUrlChange,
   onSave,
   onDelete,
+  onPreview,
+  isPreviewOpen,
+  canPreview,
 }: {
   draft: ResourceDraft;
   icon: React.ReactNode;
@@ -590,6 +620,9 @@ function ResourceRow({
   onUrlChange: (val: string) => void;
   onSave: () => void;
   onDelete: () => void;
+  onPreview: () => void;
+  isPreviewOpen: boolean;
+  canPreview: boolean;
 }) {
   return (
     <div className="rounded-xl border border-secondary-100 p-3">
@@ -602,6 +635,16 @@ function ResourceRow({
           placeholder="العنوان"
           className={`${INPUT_CLASS} text-xs`}
         />
+        <button
+          type="button"
+          onClick={onPreview}
+          disabled={!canPreview}
+          className={`shrink-0 rounded-lg p-2 transition disabled:opacity-40 ${isPreviewOpen ? 'bg-secondary-50 text-secondary' : 'text-secondary-400 hover:bg-secondary-50 hover:text-secondary'}`}
+          aria-label="معاينة"
+          title="معاينة"
+        >
+          <Eye className="h-4 w-4" />
+        </button>
         <button
           type="button"
           onClick={onDelete}
