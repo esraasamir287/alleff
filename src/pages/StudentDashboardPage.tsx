@@ -120,7 +120,7 @@ function DashboardFrame({
     <div dir="rtl" className="min-h-screen bg-[#fbfaff] text-[#17154f]">
       <div className="flex min-h-screen">
         <aside className="fixed inset-y-0 right-0 z-30 hidden w-[252px] border-l border-[#ece9fb] bg-white lg:flex lg:flex-col">
-          <Sidebar userName={userName} onLogout={onLogout} activeView={activeView} onSelectView={setActiveView} />
+          <Sidebar userName={userName} onLogout={onLogout} activeView={activeView} onSelectView={onSelectView} />
         </aside>
 
         {mobileMenuOpen && (
@@ -131,7 +131,7 @@ function DashboardFrame({
                 <img src="/image.png" alt="Allef" className="h-9 w-auto" />
                 <button type="button" onClick={() => setMobileMenuOpen(false)} className="rounded-xl p-2 text-[#77739c] hover:bg-[#f6f3ff]" aria-label="إغلاق القائمة"><X className="h-5 w-5" /></button>
               </div>
-              <Sidebar userName={userName} onLogout={onLogout} activeView={activeView} onSelectView={(view) => { setActiveView(view); setMobileMenuOpen(false); }} onNavigate={() => setMobileMenuOpen(false)} />
+              <Sidebar userName={userName} onLogout={onLogout} activeView={activeView} onSelectView={(view) => { onSelectView(view); setMobileMenuOpen(false); }} onNavigate={() => setMobileMenuOpen(false)} />
             </aside>
           </div>
         )}
