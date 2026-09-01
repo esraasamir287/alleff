@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ExternalLink, PlayCircle, X, Youtube } from 'lucide-react';
 import { parseVideoUrl } from '../../lib/mediaUrl';
 
@@ -9,14 +8,8 @@ interface VideoPlayerProps {
 }
 
 export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
-  const { kind, embedUrl, thumbnailUrl } = parseVideoUrl(videoUrl);
-  const [playing, setPlaying] = useState(false);
-
-  const autoplayEmbed = embedUrl
-    ? kind === 'youtube'
-      ? `${embedUrl}&autoplay=1`
-      : embedUrl
-    : null;
+  const { kind, thumbnailUrl } = parseVideoUrl(videoUrl);
+  const watchUrl = videoUrl.trim();
 
   return (
     <div className="mt-3 overflow-hidden rounded-2xl border border-[#e1d7ff] bg-white shadow-sm">
@@ -37,35 +30,21 @@ export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
       </div>
 
       <div dir="ltr" className="w-full bg-black">
-        {playing && (kind === 'youtube' || kind === 'vimeo' || kind === 'drive') && autoplayEmbed ? (
-          <div className="relative aspect-video w-full">
-            <iframe
-              src={autoplayEmbed}
-              className="absolute inset-0 h-full w-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-              title={title ?? 'فيديو الشرح'}
-            />
-          </div>
-        ) : (kind === 'youtube' || kind === 'vimeo' || kind === 'drive') && embedUrl ? (
-          <button
-            type="button"
-            onClick={() => setPlaying(true)}
+        {(kind === 'youtube' || kind === 'vimeo' || kind === 'drive') && thumbnailUrl ? (
+          <a
+            href={watchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
             className="group relative block aspect-video w-full cursor-pointer overflow-hidden bg-black"
-            aria-label="تشغيل الفيديو"
+            title="فتح الفيديو على يوتيوب"
           >
-            {thumbnailUrl ? (
-              <img
-                src={thumbnailUrl}
-                alt={title ?? 'فيديو الشرح'}
-                className="absolute inset-0 h-full w-full object-cover opacity-90 transition group-hover:opacity-100"
-                loading="lazy"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#1a1a2e] to-[#16213e]" />
-            )}
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover:bg-black/10">
+            <img
+              src={thumbnailUrl}
+              alt={title ?? 'فيديو الشرح'}
+              className="absolute inset-0 h-full w-full object-cover opacity-90 transition group-hover:opacity-100"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/25 transition group-hover:bg-black/15">
               <span className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 shadow-lg transition group-hover:scale-110 group-hover:bg-red-500">
                 <PlayCircle className="h-9 w-9 text-white" />
               </span>
@@ -73,10 +52,10 @@ export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
             <div className="absolute bottom-3 left-3 z-10">
               <span className="inline-flex items-center gap-1.5 rounded-lg bg-black/70 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur-sm">
                 <Youtube className="h-3.5 w-3.5" />
-                اضغط للتشغيل
+                اضغط للتشغيل على يوتيوب
               </span>
             </div>
-          </button>
+          </a>
         ) : kind === 'direct' ? (
           <video
             src={videoUrl}
@@ -88,7 +67,7 @@ export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
         ) : (
           <div className="flex aspect-video w-full items-center justify-center bg-[#1a1a2e]">
             <a
-              href={videoUrl}
+              href={watchUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/20"
@@ -100,11 +79,11 @@ export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
         )}
       </div>
 
-      {(kind === 'youtube' || kind === 'vimeo' || kind === 'drive') && !playing && embedUrl && (
+      {(kind === 'youtube' || kind === 'vimeo' || kind === 'drive') && (
         <div className="flex items-center justify-between gap-2 border-t border-[#eeeaf8] bg-[#faf8ff] px-4 py-2.5">
-          <span className="truncate text-[10px] font-bold text-[#8c88a6]" dir="ltr">{videoUrl}</span>
+          <span className="truncate text-[10px] font-bold text-[#8c88a6]" dir="ltr">{watchUrl}</span>
           <a
-            href={videoUrl}
+            href={watchUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-[11px] font-extrabold text-[#3c3672] shadow-sm transition hover:bg-[#f0ebff]"
