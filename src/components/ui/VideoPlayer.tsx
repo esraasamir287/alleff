@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { ExternalLink, PlayCircle, X, Youtube } from 'lucide-react';
 import { parseVideoUrl } from '../../lib/mediaUrl';
 
@@ -8,25 +8,15 @@ interface VideoPlayerProps {
   onClose?: () => void;
 }
 
-const FALLBACK_TIMEOUT_MS = 4000;
-
 export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
-  const { kind, embedUrl } = parseVideoUrl(videoUrl);
-  const [embedFailed, setEmbedFailed] = useState(false);
-  const embedLoadedRef = useRef(false);
+  const { kind, embedUrl, thumbnailUrl } = parseVideoUrl(videoUrl);
+  const [playing, setPlaying] = useState(false);
 
-  useEffect(() => {
-    setEmbedFailed(false);
-    embedLoadedRef.current = false;
-
-    if (kind === 'direct' || !embedUrl) return;
-
-    const timer = window.setTimeout(() => {
-      if (!embedLoadedRef.current) setEmbedFailed(true);
-    }, FALLBACK_TIMEOUT_MS);
-
-    return () => window.clearTimeout(timer);
-  }, [embedUrl, kind]);
+  const autoplayEmbed = embedUrl
+    ? kind === 'youtube'
+      ? `${embedUrl}&autoplay=1`
+      : embedUrl
+    : null;
 
   return (
     <div className="mt-3 overflow-hidden rounded-2xl border border-[#e1d7ff] bg-white shadow-sm">
@@ -47,33 +37,46 @@ export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
       </div>
 
       <div dir="ltr" className="w-full bg-black">
-        {(kind === 'youtube' || kind === 'vimeo' || kind === 'drive') && embedUrl ? (
+        {playing && (kind === 'youtube' || kind === 'vimeo' || kind === 'drive') && autoplayEmbed ? (
           <div className="relative aspect-video w-full">
             <iframe
-              src={embedUrl}
+              src={autoplayEmbed}
               className="absolute inset-0 h-full w-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
               title={title ?? 'فيديو الشرح'}
-              onLoad={() => { embedLoadedRef.current = true; }}
             />
-            {embedFailed && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#171745] bg-cover bg-center px-5 text-center" role="status">
-                <PlayCircle className="h-10 w-10 text-white" aria-hidden="true" />
-                <p className="max-w-xs text-xs font-bold leading-relaxed text-white/90">تعذّر عرض الفيديو داخل المعاينة. يمكنك فتحه مباشرة على يوتيوب.</p>
-                <a
-                  href={videoUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-extrabold text-[#171745] transition hover:bg-white/90"
-                >
-                  <Youtube className="h-4 w-4" />
-                  فتح على يوتيوب
-                </a>
-              </div>
-            )}
           </div>
+        ) : (kind === 'youtube' || kind === 'vimeo' || kind === 'drive') && embedUrl ? (
+          <button
+            type="button"
+            onClick={() => setPlaying(true)}
+            className="group relative block aspect-video w-full cursor-pointer overflow-hidden bg-black"
+            aria-label="تشغيل الفيديو"
+          >
+            {thumbnailUrl ? (
+              <img
+                src={thumbnailUrl}
+                alt={title ?? 'فيديو الشرح'}
+                className="absolute inset-0 h-full w-full object-cover opacity-90 transition group-hover:opacity-100"
+                loading="lazy"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#1a1a2e] to-[#16213e]" />
+            )}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover:bg-black/10">
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 shadow-lg transition group-hover:scale-110 group-hover:bg-red-500">
+                <PlayCircle className="h-9 w-9 text-white" />
+              </span>
+            </div>
+            <div className="absolute bottom-3 left-3 z-10">
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-black/70 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur-sm">
+                <Youtube className="h-3.5 w-3.5" />
+                اضغط للتشغيل
+              </span>
+            </div>
+          </button>
         ) : kind === 'direct' ? (
           <video
             src={videoUrl}
@@ -96,6 +99,21 @@ export function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
           </div>
         )}
       </div>
+
+      {(kind === 'youtube' || kind === 'vimeo' || kind === 'drive') && !playing && embedUrl && (
+        <div className="flex items-center justify-between gap-2 border-t border-[#eeeaf8] bg-[#faf8ff] px-4 py-2.5">
+          <span className="truncate text-[10px] font-bold text-[#8c88a6]" dir="ltr">{videoUrl}</span>
+          <a
+            href={videoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-[11px] font-extrabold text-[#3c3672] shadow-sm transition hover:bg-[#f0ebff]"
+          >
+            <Youtube className="h-3.5 w-3.5" />
+            فتح على يوتيوب
+          </a>
+        </div>
+      )}
     </div>
   );
 }
