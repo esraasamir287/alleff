@@ -26,12 +26,15 @@ import {
   fetchGrades,
   createGrade,
   updateGrade,
+  deleteGrade,
   fetchUnitsWithLessonCount,
   fetchLessonsByUnit,
   createUnit,
   updateUnit,
+  deleteUnit,
   createLesson,
   updateLesson,
+  deleteLesson,
   addLessonResource,
   updateLessonResource,
   deleteLessonResource,
@@ -64,6 +67,30 @@ export function AdminContentPage() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [lessonModalUnitId, setLessonModalUnitId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'grade' | 'unit' | 'lesson'; id: string; title: string } | null>(null);
+
+  function bumpRefresh() {
+    setRefreshKey((k) => k + 1);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      if (deleteTarget.type === 'grade') {
+        await deleteGrade(deleteTarget.id);
+        await loadGrades();
+      } else if (deleteTarget.type === 'unit') {
+        await deleteUnit(deleteTarget.id);
+      } else if (deleteTarget.type === 'lesson') {
+        await deleteLesson(deleteTarget.id);
+      }
+      bumpRefresh();
+      setDeleteTarget(null);
+    } catch {
+      setDeleteTarget(null);
+    }
+  }
 
   const loadGrades = useCallback(async () => {
     setLoading(true);
@@ -162,6 +189,7 @@ export function AdminContentPage() {
       }
       closeModal();
       await loadGrades();
+      bumpRefresh();
     } catch {
       setFormError('تعذّر حفظ الصف. حاول مرة أخرى.');
     } finally {
@@ -184,6 +212,7 @@ export function AdminContentPage() {
         await createUnit(formTitle.trim(), order, selectedGradeId);
       }
       closeModal();
+      bumpRefresh();
     } catch {
       setFormError('تعذّر حفظ الوحدة. حاول مرة أخرى.');
     } finally {
@@ -205,6 +234,7 @@ export function AdminContentPage() {
         await createLesson(unitId, formTitle.trim(), order);
       }
       closeModal();
+      bumpRefresh();
     } catch {
       setFormError('تعذّر حفظ الدرس. حاول مرة أخرى.');
     } finally {
@@ -280,6 +310,9 @@ export function AdminContentPage() {
                     <button type="button" onClick={() => openEditGrade(grade)} className="shrink-0 rounded-lg p-1.5 text-muted opacity-0 transition hover:bg-soft hover:text-secondary group-hover:opacity-100" aria-label="تعديل">
                       <Edit3 className="h-3.5 w-3.5" />
                     </button>
+                    <button type="button" onClick={() => setDeleteTarget({ type: 'grade', id: grade.id, title: grade.title })} className="shrink-0 rounded-lg p-1.5 text-red-400 opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100" aria-label="حذف">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -291,10 +324,13 @@ export function AdminContentPage() {
                 <UnitsColumn
                   gradeId={selectedGrade.id}
                   gradeTitle={selectedGrade.title}
+                  refreshKey={refreshKey}
                   onAddUnit={openAddUnit}
                   onEditUnit={openEditUnit}
+                  onDeleteUnit={(unit) => setDeleteTarget({ type: 'unit', id: unit.id, title: unit.title })}
                   onAddLesson={openAddLesson}
                   onEditLesson={openEditLesson}
+                  onDeleteLesson={(lesson) => setDeleteTarget({ type: 'lesson', id: lesson.id, title: lesson.title })}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center">
@@ -307,7 +343,7 @@ export function AdminContentPage() {
             {/* Lesson content column */}
             <section className="order-3 overflow-hidden rounded-2xl border border-secondary-100 bg-white shadow-soft lg:order-1">
               {selectedGrade ? (
-                <LessonContentColumn gradeId={selectedGrade.id} gradeTitle={selectedGrade.title} onAddLesson={openAddLesson} onEditLesson={openEditLesson} />
+                <LessonContentColumn gradeId={selectedGrade.id} gradeTitle={selectedGrade.title} refreshKey={refreshKey} onAddLesson={openAddLesson} onEditLesson={openEditLesson} onDeleteLesson={(lesson) => setDeleteTarget({ type: 'lesson', id: lesson.id, title: lesson.title })} />
               ) : (
                 <div className="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center">
                   <BookOpen className="h-12 w-12 text-secondary-200" aria-hidden="true" />
@@ -381,19 +417,35 @@ export function AdminContentPage() {
         onSave={handleSaveLesson}
         selectedUnitId={lessonModalUnitId}
       />
+      {/* Delete Confirmation Modal */}
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="تأكيد الحذف">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-3 rounded-xl bg-red-50 px-4 py-3.5">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden="true" />
+            <p className="text-sm font-bold text-red-700">هل أنت متأكد من حذف «{deleteTarget?.title}»؟{deleteTarget?.type === 'grade' && ' سيتم حذف جميع الوحدات والدروس بداخله.'}{deleteTarget?.type === 'unit' && ' سيتم حذف جميع الدروس بداخله.'}</p>
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-xl px-4 py-2.5 text-xs font-extrabold text-muted transition hover:bg-soft">إلغاء</button>
+            <button type="button" onClick={handleConfirmDelete} className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-red-700"><Trash2 className="h-4 w-4" />حذف نهائي</button>
+          </div>
+        </div>
+      </Modal>
     </AdminLayout>
   );
 }
 
 /* ----------------------------- Units Column ----------------------------- */
 
-function UnitsColumn({ gradeId, gradeTitle, onAddUnit, onEditUnit, onAddLesson, onEditLesson }: {
+function UnitsColumn({ gradeId, gradeTitle, refreshKey, onAddUnit, onEditUnit, onDeleteUnit, onAddLesson, onEditLesson, onDeleteLesson }: {
   gradeId: string;
   gradeTitle: string;
+  refreshKey: number;
   onAddUnit: () => void;
   onEditUnit: (unit: LessonWithCount) => void;
+  onDeleteUnit: (unit: LessonWithCount) => void;
   onAddLesson: (unitId: string) => void;
   onEditLesson: (lesson: ContentLesson) => void;
+  onDeleteLesson: (lesson: ContentLesson) => void;
 }) {
   const [units, setUnits] = useState<LessonWithCount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -408,7 +460,7 @@ function UnitsColumn({ gradeId, gradeTitle, onAddUnit, onEditUnit, onAddLesson, 
       const data = await fetchUnitsWithLessonCount(gradeId);
       setUnits(data);
       if (data.length > 0) {
-        setSelectedUnitId(data[0].id);
+        setSelectedUnitId((prev) => prev && data.some((u) => u.id === prev) ? prev : data[0].id);
       } else {
         setSelectedUnitId(null);
       }
@@ -437,17 +489,11 @@ function UnitsColumn({ gradeId, gradeTitle, onAddUnit, onEditUnit, onAddLesson, 
 
   useEffect(() => {
     void loadUnits();
-  }, [loadUnits]);
+  }, [loadUnits, refreshKey]);
 
   useEffect(() => {
     void loadLessons();
-  }, [loadLessons]);
-
-  // Refresh units when modal closes (in case a unit was added/edited)
-  useEffect(() => {
-    if (loading) return;
-    void loadUnits();
-  }, [loadUnits]);
+  }, [loadLessons, refreshKey]);
 
   const selectedUnit = units.find((u) => u.id === selectedUnitId) ?? null;
 
@@ -488,6 +534,9 @@ function UnitsColumn({ gradeId, gradeTitle, onAddUnit, onEditUnit, onAddLesson, 
               </button>
               <button type="button" onClick={() => onEditUnit(unit)} className="shrink-0 rounded-lg p-1.5 text-muted opacity-0 transition hover:bg-soft hover:text-secondary group-hover:opacity-100" aria-label="تعديل">
                 <Edit3 className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" onClick={() => onDeleteUnit(unit)} className="shrink-0 rounded-lg p-1.5 text-red-400 opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100" aria-label="حذف">
+                <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           ))
@@ -532,6 +581,9 @@ function UnitsColumn({ gradeId, gradeTitle, onAddUnit, onEditUnit, onAddLesson, 
                   <button type="button" onClick={() => onEditLesson(lesson)} className="shrink-0 rounded-lg p-1.5 text-muted opacity-0 transition hover:bg-soft hover:text-secondary group-hover:opacity-100" aria-label="تعديل">
                     <Edit3 className="h-3.5 w-3.5" />
                   </button>
+                  <button type="button" onClick={() => onDeleteLesson(lesson)} className="shrink-0 rounded-lg p-1.5 text-red-400 opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100" aria-label="حذف">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               );
             })
@@ -544,11 +596,13 @@ function UnitsColumn({ gradeId, gradeTitle, onAddUnit, onEditUnit, onAddLesson, 
 
 /* ----------------------------- Lesson Content Column ----------------------------- */
 
-function LessonContentColumn({ gradeId, gradeTitle, onAddLesson, onEditLesson }: {
+function LessonContentColumn({ gradeId, gradeTitle, refreshKey, onAddLesson, onEditLesson, onDeleteLesson }: {
   gradeId: string;
   gradeTitle: string;
+  refreshKey: number;
   onAddLesson: (unitId: string) => void;
   onEditLesson: (lesson: ContentLesson) => void;
+  onDeleteLesson: (lesson: ContentLesson) => void;
 }) {
   const [units, setUnits] = useState<UnitWithLessons[]>([]);
   const [loading, setLoading] = useState(true);
@@ -561,7 +615,7 @@ function LessonContentColumn({ gradeId, gradeTitle, onAddLesson, onEditLesson }:
       const data = await fetchUnitsWithLessonCount(gradeId);
       setUnits(data.map((u) => ({ ...u, lessons: [] })));
       if (data.length > 0) {
-        setSelectedUnitId(data[0].id);
+        setSelectedUnitId((prev) => prev && data.some((u) => u.id === prev) ? prev : data[0].id);
       } else {
         setSelectedUnitId(null);
         setSelectedLessonId(null);
@@ -575,7 +629,7 @@ function LessonContentColumn({ gradeId, gradeTitle, onAddLesson, onEditLesson }:
 
   useEffect(() => {
     void loadUnits();
-  }, [loadUnits]);
+  }, [loadUnits, refreshKey]);
 
   const selectedUnit = units.find((u) => u.id === selectedUnitId) ?? null;
   const [lessons, setLessons] = useState<ContentLesson[]>([]);
@@ -591,7 +645,7 @@ function LessonContentColumn({ gradeId, gradeTitle, onAddLesson, onEditLesson }:
       const data = await fetchLessonsByUnit(selectedUnitId);
       setLessons(data);
       if (data.length > 0) {
-        setSelectedLessonId(data[0].id);
+        setSelectedLessonId((prev) => prev && data.some((l) => l.id === prev) ? prev : data[0].id);
       } else {
         setSelectedLessonId(null);
       }
@@ -604,7 +658,7 @@ function LessonContentColumn({ gradeId, gradeTitle, onAddLesson, onEditLesson }:
 
   useEffect(() => {
     void loadLessons();
-  }, [loadLessons]);
+  }, [loadLessons, refreshKey]);
 
   const selectedLesson = lessons.find((l) => l.id === selectedLessonId) ?? null;
 
@@ -662,7 +716,7 @@ function LessonContentColumn({ gradeId, gradeTitle, onAddLesson, onEditLesson }:
       </div>
 
       {selectedLesson ? (
-        <LessonResources lesson={selectedLesson} onReload={loadLessons} onEditLesson={onEditLesson} />
+        <LessonResources lesson={selectedLesson} onReload={loadLessons} onEditLesson={onEditLesson} onDeleteLesson={onDeleteLesson} />
       ) : (
         <div className="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center">
           <BookOpen className="h-12 w-12 text-secondary-200" aria-hidden="true" />
@@ -700,7 +754,7 @@ function toDrafts(resources: LessonResource[]): ResourceDraft[] {
   }));
 }
 
-function LessonResources({ lesson, onReload, onEditLesson }: { lesson: ContentLesson; onReload: () => void; onEditLesson: (lesson: ContentLesson) => void }) {
+function LessonResources({ lesson, onReload, onEditLesson, onDeleteLesson }: { lesson: ContentLesson; onReload: () => void; onEditLesson: (lesson: ContentLesson) => void; onDeleteLesson: (lesson: ContentLesson) => void }) {
   const [drafts, setDrafts] = useState<ResourceDraft[]>([]);
   const [resourceError, setResourceError] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
@@ -784,9 +838,14 @@ function LessonResources({ lesson, onReload, onEditLesson }: { lesson: ContentLe
         <div className="flex items-center gap-2 text-xs font-bold text-muted">
           <span>الدرس {lesson.lesson_order}: {lesson.title}</span>
         </div>
-        <button type="button" onClick={() => onEditLesson(lesson)} className="inline-flex items-center gap-1 rounded-lg bg-soft px-3 py-1.5 text-[11px] font-extrabold text-primary transition hover:bg-secondary-50">
-          <Edit3 className="h-3.5 w-3.5" /> تعديل الدرس
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => onEditLesson(lesson)} className="inline-flex items-center gap-1 rounded-lg bg-soft px-3 py-1.5 text-[11px] font-extrabold text-primary transition hover:bg-secondary-50">
+            <Edit3 className="h-3.5 w-3.5" /> تعديل الدرس
+          </button>
+          <button type="button" onClick={() => onDeleteLesson(lesson)} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-[11px] font-extrabold text-red-600 transition hover:bg-red-100">
+            <Trash2 className="h-3.5 w-3.5" /> حذف الدرس
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 flex items-start gap-3 rounded-xl bg-blue-50 px-4 py-3.5 text-xs font-bold leading-relaxed text-blue-700">

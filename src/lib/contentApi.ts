@@ -90,19 +90,21 @@ export async function deleteGrade(gradeId: string): Promise<void> {
 /* ---- Units CRUD ---- */
 
 export async function fetchUnitsWithLessonCount(gradeId?: string): Promise<LessonWithCount[]> {
-  let query = supabase
-    .from('units')
-    .select('id, title, unit_order, grade_id, created_at, lessons(id)')
-    .order('unit_order', { ascending: true });
+  const response = gradeId
+    ? await supabase
+        .from('units')
+        .select('id, title, unit_order, grade_id, created_at, lessons(id)')
+        .eq('grade_id', gradeId)
+        .order('unit_order', { ascending: true })
+    : await supabase
+        .from('units')
+        .select('id, title, unit_order, grade_id, created_at, lessons(id)')
+        .order('unit_order', { ascending: true });
 
-  if (gradeId) {
-    query = query.eq('grade_id', gradeId);
-  }
-
-  const { data, error } = query;
+  const { data, error } = response;
 
   if (error) throw error;
-  return (data ?? []).map((u) => ({
+  return (data ?? []).map((u: { id: string; title: string; unit_order: number; grade_id: string | null; created_at: string; lessons?: { id: string }[] }) => ({
     id: u.id,
     title: u.title,
     unit_order: u.unit_order,
@@ -203,19 +205,21 @@ export interface UnitWithLessons extends ContentUnit {
 }
 
 export async function fetchUnitsWithLessons(gradeId?: string): Promise<UnitWithLessons[]> {
-  let query = supabase
-    .from('units')
-    .select('id, title, unit_order, grade_id, created_at, lessons(id, unit_id, title, lesson_order, video_url, pdf_url, created_at, lesson_resources(id, lesson_id, resource_type, title, url, resource_order, created_at))')
-    .order('unit_order', { ascending: true });
+  const response = gradeId
+    ? await supabase
+        .from('units')
+        .select('id, title, unit_order, grade_id, created_at, lessons(id, unit_id, title, lesson_order, video_url, pdf_url, created_at, lesson_resources(id, lesson_id, resource_type, title, url, resource_order, created_at))')
+        .eq('grade_id', gradeId)
+        .order('unit_order', { ascending: true })
+    : await supabase
+        .from('units')
+        .select('id, title, unit_order, grade_id, created_at, lessons(id, unit_id, title, lesson_order, video_url, pdf_url, created_at, lesson_resources(id, lesson_id, resource_type, title, url, resource_order, created_at))')
+        .order('unit_order', { ascending: true });
 
-  if (gradeId) {
-    query = query.eq('grade_id', gradeId);
-  }
-
-  const { data, error } = query;
+  const { data, error } = response;
 
   if (error) throw error;
-  return (data ?? []).map((u) => ({
+  return (data ?? []).map((u: { id: string; title: string; unit_order: number; grade_id: string | null; created_at: string; lessons?: ContentLesson[] }) => ({
     id: u.id,
     title: u.title,
     unit_order: u.unit_order,
