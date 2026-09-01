@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bell, BarChart3, BookOpen, CheckCircle2, ChevronDown, ChevronLeft, ClipboardCheck, FileDown, FileText, Headphones, Home, Loader2, LogOut, Menu, MessageCircle, PlayCircle, Settings, Sparkles, CircleUser as UserCircle, X } from 'lucide-react';
+import { ArrowLeft, Bell, BarChart3, BookOpen, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ClipboardCheck, Upload, FileDown, FileText, Headphones, Home, ImagePlus, Loader2, LogOut, Menu, MessageCircle, PlayCircle, Send, Settings, Sparkles, CircleUser as UserCircle, X } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 import { VideoPlayer } from '../components/ui/VideoPlayer';
 import { PdfViewer } from '../components/ui/PdfViewer';
@@ -32,6 +32,7 @@ export function StudentDashboardPage() {
   const [attemptCount, setAttemptCount] = useState(0);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<'dashboard' | 'homework'>('dashboard');
 
   const load = useCallback(async () => {
     if (!user) {
@@ -86,8 +87,9 @@ export function StudentDashboardPage() {
 
   const packageDetails = getPackageDetails(request!);
   return (
-    <DashboardFrame onLogout={handleLogout} userName={profile?.fullName}>
+    <DashboardFrame onLogout={handleLogout} userName={profile?.fullName} activeView={activeView} onSelectView={setActiveView}>
       <DashboardContent
+        activeView={activeView}
         packageDetails={packageDetails}
         status={request!.status}
         userName={profile?.fullName}
@@ -104,18 +106,21 @@ function DashboardFrame({
   children,
   onLogout,
   userName,
+  activeView = 'dashboard',
+  onSelectView = () => undefined,
 }: {
   children: ReactNode;
   onLogout?: () => void;
   userName?: string | null;
+  activeView?: 'dashboard' | 'homework';
+  onSelectView?: (view: 'dashboard' | 'homework') => void;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   return (
     <div dir="rtl" className="min-h-screen bg-[#fbfaff] text-[#17154f]">
       <div className="flex min-h-screen">
         <aside className="fixed inset-y-0 right-0 z-30 hidden w-[252px] border-l border-[#ece9fb] bg-white lg:flex lg:flex-col">
-          <Sidebar userName={userName} onLogout={onLogout} />
+          <Sidebar userName={userName} onLogout={onLogout} activeView={activeView} onSelectView={setActiveView} />
         </aside>
 
         {mobileMenuOpen && (
@@ -126,7 +131,7 @@ function DashboardFrame({
                 <img src="/image.png" alt="Allef" className="h-9 w-auto" />
                 <button type="button" onClick={() => setMobileMenuOpen(false)} className="rounded-xl p-2 text-[#77739c] hover:bg-[#f6f3ff]" aria-label="إغلاق القائمة"><X className="h-5 w-5" /></button>
               </div>
-              <Sidebar userName={userName} onLogout={onLogout} onNavigate={() => setMobileMenuOpen(false)} />
+              <Sidebar userName={userName} onLogout={onLogout} activeView={activeView} onSelectView={(view) => { setActiveView(view); setMobileMenuOpen(false); }} onNavigate={() => setMobileMenuOpen(false)} />
             </aside>
           </div>
         )}
@@ -146,13 +151,13 @@ function DashboardFrame({
   );
 }
 
-function Sidebar({ userName, onLogout, onNavigate }: { userName?: string | null; onLogout?: () => void; onNavigate?: () => void }) {
+function Sidebar({ userName, onLogout, onNavigate, activeView, onSelectView }: { userName?: string | null; onLogout?: () => void; onNavigate?: () => void; activeView: 'dashboard' | 'homework'; onSelectView: (view: 'dashboard' | 'homework') => void }) {
   const mainItems = [
-    { label: 'لوحة التحكم', icon: Home, active: true },
-    { label: 'دروسي', icon: BookOpen },
-    { label: 'الاختبارات', icon: ClipboardCheck },
-    { label: 'الواجبات', icon: FileText },
-    { label: 'متابعتي', icon: BarChart3 },
+    { label: 'لوحة التحكم', icon: Home, view: 'dashboard' as const },
+    { label: 'دروسي', icon: BookOpen, view: 'dashboard' as const },
+    { label: 'الاختبارات', icon: ClipboardCheck, view: 'dashboard' as const },
+    { label: 'الواجبات', icon: FileText, view: 'homework' as const },
+    { label: 'متابعتي', icon: BarChart3, view: 'dashboard' as const },
   ];
   const secondaryItems = [
     { label: 'الرسائل', icon: MessageCircle },
@@ -164,8 +169,8 @@ function Sidebar({ userName, onLogout, onNavigate }: { userName?: string | null;
     <div className="flex min-h-0 flex-1 flex-col px-4 py-5">
       <Link to="/" onClick={onNavigate} className="mb-7 flex items-center justify-center border-b border-[#f0eef9] pb-5"><img src="/image.png" alt="Allef" className="h-10 w-auto" /></Link>
       <nav className="flex flex-1 flex-col gap-1">
-        {mainItems.map(({ label, icon: Icon, active }) => (
-          <button key={label} type="button" onClick={onNavigate} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${active ? 'bg-[#f0ebff] text-[#5834c6]' : 'text-[#595681] hover:bg-[#faf8ff] hover:text-[#5834c6]'}`}>
+        {mainItems.map(({ label, icon: Icon, view }) => (
+          <button key={label} type="button" onClick={() => { onSelectView(view); onNavigate?.(); }} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${activeView === view && (view === 'homework' || label === 'لوحة التحكم') ? 'bg-[#f0ebff] text-[#5834c6]' : 'text-[#595681] hover:bg-[#faf8ff] hover:text-[#5834c6]'}`}>
             <Icon className="h-5 w-5" />
             {label}
           </button>
@@ -192,13 +197,17 @@ function Sidebar({ userName, onLogout, onNavigate }: { userName?: string | null;
   );
 }
 
-function DashboardContent({ packageDetails, status, userName, units, attemptCount, error, onRetry }: { packageDetails: StudentPackageDetails; status: SubscriptionRequestStatus; userName?: string | null; units: Unit[]; attemptCount: number; error: string | null; onRetry: () => void }) {
+function DashboardContent({ activeView, packageDetails, status, userName, units, attemptCount, error, onRetry }: { activeView: 'dashboard' | 'homework'; packageDetails: StudentPackageDetails; status: SubscriptionRequestStatus; userName?: string | null; units: Unit[]; attemptCount: number; error: string | null; onRetry: () => void }) {
   const [activeUnit, setActiveUnit] = useState(0);
   const [openLesson, setOpenLesson] = useState<string | null>(null);
   const unit = units[activeUnit];
   const firstName = userName?.trim().split(' ')[0] || 'صديقي';
 
   const totalLessons = units.reduce((sum, u) => sum + u.lessons.length, 0);
+
+  if (activeView === 'homework') {
+    return <HomeworkView firstName={firstName} />;
+  }
 
   useEffect(() => {
     if (units.length > 0 && units[activeUnit]?.lessons[0]) {
@@ -242,6 +251,72 @@ function DashboardContent({ packageDetails, status, userName, units, attemptCoun
       <div className="mt-5 flex items-center justify-center gap-4 rounded-2xl bg-gradient-to-l from-[#eee6ff] to-[#faf8ff] px-5 py-4 text-center text-sm font-bold text-[#68618f]"><span className="text-xl text-[#7651d5]">“</span> توقفي عندما تتعبي، توقفي عندما تنتهي... أنتِ أقرب مما تتخيلي! <span className="text-xl text-[#7651d5]">”</span></div>
     </div>
   );
+}
+
+function HomeworkView({ firstName }: { firstName: string }) {
+  const [selectedFiles, setSelectedFiles] = useState<{ name: string; size: string; type: 'image' | 'pdf' }[]>([
+    { name: 'إجاباتي.pdf', size: '2.1 MB', type: 'pdf' },
+    { name: 'صورة 2.jpg', size: '1.5 MB', type: 'image' },
+    { name: 'صورة 1.jpg', size: '1.2 MB', type: 'image' },
+  ]);
+
+  function handleFiles(files: FileList | null) {
+    if (!files) return;
+    const nextFiles = Array.from(files).map((file) => ({
+      name: file.name,
+      size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+      type: file.type === 'application/pdf' ? 'pdf' as const : 'image' as const,
+    }));
+    setSelectedFiles((current) => [...current, ...nextFiles]);
+  }
+
+  return (
+    <div className="mx-auto max-w-5xl">
+      <section className="mb-7 flex flex-col-reverse items-center justify-between gap-5 sm:flex-row sm:items-start">
+        <div className="w-full text-right sm:pt-4">
+          <p className="text-sm font-bold text-[#7c78a2]">مرحباً بعودتك</p>
+          <h1 className="mt-1 text-3xl font-black tracking-tight text-[#17154f] sm:text-4xl">مرحباً {firstName}!</h1>
+          <p className="mt-3 text-sm font-semibold text-[#77739c]">جاهزة لتسليم واجباتك ومتابعة تقدمك؟</p>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#e8e1fa] bg-white px-3 py-1.5 text-xs font-bold text-[#6858aa]"><ClipboardCheck className="h-3.5 w-3.5" />الواجبات</div>
+        </div>
+        <div className="relative hidden h-36 w-64 shrink-0 overflow-hidden rounded-2xl border border-[#e1d7ff] bg-gradient-to-br from-[#f5eeff] to-[#fafbff] sm:block">
+          <div className="absolute -bottom-8 -left-6 h-32 w-32 rounded-full bg-[#d9c2ff]/50" />
+          <div className="absolute right-5 top-7 text-right"><p className="text-lg font-black text-[#633bd0]">أنتِ قدها!</p><p className="mt-1 text-xs font-bold leading-relaxed text-[#5d5886]">المحاولة المستمرة<br />هي سر النجاح.</p></div>
+          <Sparkles className="absolute bottom-6 left-8 h-9 w-9 text-[#a678ed]" />
+        </div>
+      </section>
+
+      <div className="mb-5 flex items-center justify-between"><h2 className="text-xl font-black text-[#211b60]">الواجبات</h2><span className="rounded-full bg-[#f0ebff] px-3 py-1 text-xs font-extrabold text-[#6840d4]">2 واجبات</span></div>
+      <div className="mb-5 grid gap-4 md:grid-cols-2">
+        <HomeworkCard title="واجب الدرس الأول" dueDate="2 يونيو 2025" status="مسلّم" active={false} />
+        <HomeworkCard title="واجب الدرس الثاني" dueDate="9 يونيو 2025" status="قيد التسليم" active />
+      </div>
+
+      <section className="overflow-hidden rounded-3xl border border-[#e9e6f5] bg-white shadow-[0_8px_30px_rgba(73,52,145,0.04)]">
+        <div className="flex flex-col gap-3 border-b border-[#eeebf8] bg-gradient-to-l from-[#faf7ff] to-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+          <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#eee5ff] text-[#7040db]"><BookOpen className="h-5 w-5" /></span><h3 className="text-lg font-black text-[#211b60]">واجب الدرس الأول</h3></div>
+          <div className="flex items-center gap-4 text-xs font-bold text-[#8d89a5]"><span className="inline-flex items-center gap-1.5"><CalendarDays className="h-4 w-4 text-[#6941d3]" />تاريخ التسليم: 2 يونيو 2025 - 11:59 م</span><span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">مسلّم</span></div>
+        </div>
+        <div className="grid gap-7 p-5 sm:p-7 lg:grid-cols-[1fr_1.05fr]">
+          <div className="order-2 lg:order-1">
+            <div className="rounded-2xl border-2 border-dashed border-[#d8c4ff] bg-[#fcfaff] px-5 py-6 text-center">
+              <Upload className="mx-auto h-9 w-9 text-[#7040db]" />
+              <p className="mt-3 text-sm font-extrabold text-[#4b378e]">اسحب وأفلت الصور هنا</p><p className="mt-1 text-xs font-bold text-[#9793ad]">أو اختر ملفات من جهازك</p><p className="mt-2 text-[11px] font-semibold text-[#aaa6ba]">يمكنك رفع عدة صور أو ملف PDF واحد</p>
+              <label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-[#6840d4] px-4 py-2.5 text-xs font-extrabold text-white shadow-[0_8px_18px_rgba(104,64,212,0.2)] transition hover:bg-[#5831c1]"><Upload className="h-4 w-4" />رفع الملفات<input type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={(event) => handleFiles(event.target.files)} /></label>
+              <div className="mt-3 flex justify-center gap-2"><label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#dcd0fa] bg-white px-3 py-2 text-[11px] font-extrabold text-[#6840d4]"><ImagePlus className="h-3.5 w-3.5" />اختيار صور<input type="file" multiple accept="image/*" className="hidden" onChange={(event) => handleFiles(event.target.files)} /></label><label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[#dcd0fa] bg-white px-3 py-2 text-[11px] font-extrabold text-[#6840d4]"><FileText className="h-3.5 w-3.5" />اختيار PDF<input type="file" accept="application/pdf" className="hidden" onChange={(event) => handleFiles(event.target.files)} /></label></div>
+            </div>
+            <p className="mt-3 text-center text-[11px] font-semibold text-[#aaa6ba]">الصيغ المدعومة: JPG, JPEG, PNG, PDF <span className="mx-1">•</span> الحد الأقصى لحجم الملف: 10 MB</p>
+          </div>
+          <div className="order-1 text-right lg:order-2"><h4 className="text-base font-black text-[#5534b8]">تعليمات الواجب</h4><p className="mt-3 text-sm font-semibold leading-8 text-[#77739c]">بعد دراستك للدرس، أجب عن الأسئلة في دفترك. ثم قم برفع الصور بوضوح أو ارفع ملف PDF واحد يحتوي على إجاباتك. تأكد من أن الصور واضحة ومقروءة.</p><div className="mt-4 rounded-xl border border-[#dfd0ff] bg-[#faf7ff] px-4 py-3 text-xs font-extrabold leading-6 text-[#6840d4]"><Sparkles className="ml-1 inline h-4 w-4" />شدّي حيلك، ارفع واجبك قبل الموعد!</div><h4 className="mt-5 text-sm font-black text-[#5534b8]">الملفات المرفقة ({selectedFiles.length})</h4><div className="mt-3 grid gap-2 sm:grid-cols-3">{selectedFiles.map((file, index) => <div key={`${file.name}-${index}`} className="relative rounded-xl border border-[#e7e0f7] bg-white p-2 text-center"><button type="button" onClick={() => setSelectedFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))} className="absolute left-1.5 top-1.5 rounded-full bg-[#f4efff] p-1 text-[#8a75c9] hover:bg-red-50 hover:text-red-500"><X className="h-3 w-3" /></button><span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-lg ${file.type === 'pdf' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{file.type === 'pdf' ? <FileText className="h-6 w-6" /> : <ImagePlus className="h-6 w-6" />}</span><p className="mt-2 truncate text-[10px] font-extrabold text-[#4b4676]">{file.name}</p><p className="mt-1 text-[10px] font-bold text-[#aaa6ba]">{file.size}</p></div>)}</div></div>
+        </div>
+        <div className="flex flex-col-reverse gap-3 border-t border-[#eeebf8] px-5 py-5 sm:flex-row sm:items-center sm:justify-start sm:px-7"><button type="button" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#6840d4] px-6 py-3 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(104,64,212,0.2)] transition hover:bg-[#5831c1]"><Send className="h-4 w-4" />تسليم الواجب</button><button type="button" onClick={() => setSelectedFiles([])} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#b9a3ff] bg-white px-5 py-3 text-sm font-extrabold text-[#6840d4] transition hover:bg-[#faf7ff]"><FileDown className="h-4 w-4" />حفظ كمسودة</button></div>
+      </section>
+    </div>
+  );
+}
+
+function HomeworkCard({ title, dueDate, status, active }: { title: string; dueDate: string; status: string; active: boolean }) {
+  return <button type="button" className={`flex items-center justify-between rounded-2xl border bg-white px-5 py-4 text-right shadow-[0_5px_20px_rgba(73,52,145,0.03)] transition hover:-translate-y-0.5 hover:shadow-md ${active ? 'border-[#e2d6ff]' : 'border-[#e9e6f5]'}`}><div><h4 className="text-sm font-black text-[#302769]">{title}</h4><p className="mt-2 text-xs font-bold text-[#aaa6ba]">تاريخ التسليم: {dueDate}</p></div><div className="flex items-center gap-3"><span className={`rounded-full border px-3 py-1 text-[11px] font-extrabold ${active ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>{status}</span><ChevronLeft className="h-4 w-4 text-[#8d7bd0]" /></div></button>;
 }
 
 function StatCard({ icon, iconClass, label, value, detail, progress }: { icon: ReactNode; iconClass: string; label: string; value: string; detail: string; progress?: boolean }) {
