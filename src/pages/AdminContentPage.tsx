@@ -13,6 +13,7 @@ import {
   Plus,
   Search,
   Settings,
+  Trash2,
   Upload,
   X,
   Save,
@@ -23,9 +24,13 @@ import {
   fetchLessonsByUnit,
   createUnit,
   createLesson,
-  updateLessonContent,
+  addLessonResource,
+  updateLessonResource,
+  deleteLessonResource,
   type ContentLesson,
+  type LessonResource,
   type LessonWithCount,
+  type ResourceType,
 } from '../lib/contentApi';
 
 type ModalState = 'closed' | 'addUnit' | 'addLesson';
@@ -59,6 +64,30 @@ function Modal({ open, onClose, title, children }: { open: boolean; onClose: () 
 
 const INPUT_CLASS = 'w-full rounded-xl border border-secondary-100 bg-soft/40 py-2.5 px-3 text-sm font-bold text-ink outline-none transition placeholder:text-muted focus:border-secondary';
 
+interface ResourceDraft {
+  id: string | null;
+  resource_type: ResourceType;
+  title: string;
+  url: string;
+  resource_order: number;
+  isNew: boolean;
+  dirty: boolean;
+  saving: boolean;
+}
+
+function toDrafts(resources: LessonResource[]): ResourceDraft[] {
+  return resources.map((r) => ({
+    id: r.id,
+    resource_type: r.resource_type,
+    title: r.title,
+    url: r.url,
+    resource_order: r.resource_order,
+    isNew: false,
+    dirty: false,
+    saving: false,
+  }));
+}
+
 export function AdminContentPage() {
   const [units, setUnits] = useState<LessonWithCount[]>([]);
   const [lessons, setLessons] = useState<ContentLesson[]>([]);
@@ -69,7 +98,6 @@ export function AdminContentPage() {
   const [error, setError] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalState>('closed');
 
-  // form state
   const [unitTitle, setUnitTitle] = useState('');
   const [unitOrder, setUnitOrder] = useState('1');
   const [lessonTitle, setLessonTitle] = useState('');
@@ -77,11 +105,8 @@ export function AdminContentPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // content editing state
-  const [videoUrl, setVideoUrl] = useState('');
-  const [pdfUrl, setPdfUrl] = useState('');
-  const [contentSaving, setContentSaving] = useState(false);
-  const [contentSaved, setContentSaved] = useState(false);
+  const [drafts, setDrafts] = useState<ResourceDraft[]>([]);
+  const [resourceError, setResourceError] = useState<string | null>(null);
 
   const loadUnits = useCallback(async () => {
     setLoading(true);
@@ -133,15 +158,12 @@ export function AdminContentPage() {
   const selectedUnit = units.find((u) => u.id === selectedUnitId) ?? null;
   const selectedLesson = lessons.find((l) => l.id === selectedLessonId) ?? null;
 
-  // sync content fields when lesson changes
   useEffect(() => {
     if (selectedLesson) {
-      setVideoUrl(selectedLesson.video_url ?? '');
-      setPdfUrl(selectedLesson.pdf_url ?? '');
-      setContentSaved(false);
+      setDrafts(toDrafts(selectedLesson.lesson_resources ?? []));
+      setResourceError(null);
     } else {
-      setVideoUrl('');
-      setPdfUrl('');
+      setDrafts([]);
     }
   }, [selectedLessonId, selectedLesson]);
 
@@ -197,23 +219,94 @@ export function AdminContentPage() {
     }
   }
 
-  async function handleSaveContent() {
+  function addDraftRow(type: ResourceType) {
+    setDrafts((prev) => [
+      ...prev,
+      {
+        id: null,
+        resource_type: type,
+        title: type === 'video' ? 'فيديو الشرح' : 'مذكرة الدرس',
+        url: '',
+        resource_order: prev.length + 1,
+        isNew: true,
+        dirty: true,
+        saving: false,
+      },
+    ]);
+  }
+
+  function updateDraft(index: number, fields: Partial<ResourceDraft>) {
+    setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, ...fields, dirty: true } : d)));
+  }
+
+  async function saveDraft(index: number) {
     if (!selectedLessonId) return;
-    setContentSaving(true);
-    setContentSaved(false);
+    const draft = drafts[index];
+    if (!draft) return;
+    if (!draft.url.trim()) {
+      setResourceError('يرجى إدخال رابط صحيح');
+      return;
+    }
+    if (!draft.title.trim()) {
+      setResourceError('يرجى إدخال عنوان للمحتوى');
+      return;
+    }
+
+    setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, saving: true } : d)));
+    setResourceError(null);
+
     try {
-      await updateLessonContent(selectedLessonId, {
-        video_url: videoUrl.trim() || null,
-        pdf_url: pdfUrl.trim() || null,
-      });
-      setContentSaved(true);
+      if (draft.isNew || !draft.id) {
+        const created = await addLessonResource(
+          selectedLessonId,
+          draft.resource_type,
+          draft.title.trim(),
+          draft.url.trim(),
+          draft.resource_order,
+        );
+        setDrafts((prev) => prev.map((d, i) => (i === index ? {
+          ...d,
+          id: created.id,
+          isNew: false,
+          dirty: false,
+          saving: false,
+        } : d)));
+      } else {
+        await updateLessonResource(draft.id, {
+          title: draft.title.trim(),
+          url: draft.url.trim(),
+        });
+        setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, dirty: false, saving: false } : d)));
+      }
       await loadLessons();
     } catch {
-      setError('تعذّر حفظ محتوى الدرس.');
-    } finally {
-      setContentSaving(false);
+      setResourceError('تعذّر حفظ المحتوى. حاول مرة أخرى.');
+      setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, saving: false } : d)));
     }
   }
+
+  async function deleteDraft(index: number) {
+    const draft = drafts[index];
+    if (!draft) return;
+
+    if (!draft.id) {
+      setDrafts((prev) => prev.filter((_, i) => i !== index));
+      return;
+    }
+
+    setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, saving: true } : d)));
+    try {
+      await deleteLessonResource(draft.id);
+      setDrafts((prev) => prev.filter((_, i) => i !== index));
+      await loadLessons();
+    } catch {
+      setResourceError('تعذّر حذف المحتوى. حاول مرة أخرى.');
+      setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, saving: false } : d)));
+    }
+  }
+
+  const videoDrafts = drafts.filter((d) => d.resource_type === 'video');
+  const pdfDrafts = drafts.filter((d) => d.resource_type === 'pdf');
 
   return (
     <AdminLayout title="المحتوى التعليمي" subtitle="إدارة الوحدات والدروس ومحتوى كل درس" wide>
@@ -290,20 +383,26 @@ export function AdminContentPage() {
                 ) : lessons.length === 0 ? (
                   <p className="px-2 py-6 text-center text-xs font-bold text-muted">{selectedUnitId ? 'لا توجد دروس بعد. اضغط «إضافة درس» للبدء.' : 'اختر وحدة أولًا.'}</p>
                 ) : (
-                  lessons.map((lesson) => (
-                    <button key={lesson.id} type="button" onClick={() => setSelectedLessonId(lesson.id)} className={`flex items-center gap-3 rounded-xl border p-3 text-right transition ${selectedLessonId === lesson.id ? 'border-secondary-200 bg-secondary-50' : 'border-secondary-100 bg-white hover:bg-soft/50'}`}>
-                      <GripVertical className="h-4 w-4 shrink-0 text-secondary-300" aria-hidden="true" />
-                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${selectedLessonId === lesson.id ? 'bg-white text-secondary-700' : 'bg-soft text-primary'}`}>{lesson.lesson_order}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs font-extrabold text-primary">{lesson.title}</span>
-                        <span className="mt-1 flex items-center gap-1.5 text-[10px] font-bold text-muted">
-                          {lesson.video_url && <><PlaySquare className="h-3 w-3 text-secondary" aria-hidden="true" />فيديو</>}
-                          {lesson.pdf_url && <><FileText className="h-3 w-3 text-red-500" aria-hidden="true" />PDF</>}
-                          {!lesson.video_url && !lesson.pdf_url && <span className="text-amber-600">لا يوجد محتوى</span>}
+                  lessons.map((lesson) => {
+                    const resCount = lesson.lesson_resources?.length ?? 0;
+                    const hasVideo = (lesson.lesson_resources ?? []).some((r) => r.resource_type === 'video') || !!lesson.video_url;
+                    const hasPdf = (lesson.lesson_resources ?? []).some((r) => r.resource_type === 'pdf') || !!lesson.pdf_url;
+                    return (
+                      <button key={lesson.id} type="button" onClick={() => setSelectedLessonId(lesson.id)} className={`flex items-center gap-3 rounded-xl border p-3 text-right transition ${selectedLessonId === lesson.id ? 'border-secondary-200 bg-secondary-50' : 'border-secondary-100 bg-white hover:bg-soft/50'}`}>
+                        <GripVertical className="h-4 w-4 shrink-0 text-secondary-300" aria-hidden="true" />
+                        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${selectedLessonId === lesson.id ? 'bg-white text-secondary-700' : 'bg-soft text-primary'}`}>{lesson.lesson_order}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-extrabold text-primary">{lesson.title}</span>
+                          <span className="mt-1 flex items-center gap-1.5 text-[10px] font-bold text-muted">
+                            {hasVideo && <><PlaySquare className="h-3 w-3 text-secondary" aria-hidden="true" />فيديو</>}
+                            {hasPdf && <><FileText className="h-3 w-3 text-red-500" aria-hidden="true" />PDF</>}
+                            {!hasVideo && !hasPdf && <span className="text-amber-600">لا يوجد محتوى</span>}
+                            {resCount > 1 && <span className="text-muted">({resCount})</span>}
+                          </span>
                         </span>
-                      </span>
-                    </button>
-                  ))
+                      </button>
+                    );
+                  })
                 )}
                 <button type="button" onClick={openAddLesson} className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-secondary-300 bg-secondary-50/30 p-4 text-xs font-extrabold text-secondary transition hover:bg-secondary-50"><Plus className="h-4 w-4" aria-hidden="true" />إضافة درس جديد</button>
               </div>
@@ -333,28 +432,74 @@ export function AdminContentPage() {
                     </div>
                   </div>
                   <div className="p-5">
-                    <div className="flex items-start gap-3 rounded-xl bg-blue-50 px-4 py-3.5 text-xs font-bold leading-relaxed text-blue-700"><Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><p>أضف المحتوى الذي تريد أن يظهر للطالب في هذا الدرس<br /><span className="font-semibold text-blue-600">يمكنك إضافة أي نوع من المحتوى أو أكثر حسب الحاجة</span></p></div>
+                    <div className="flex items-start gap-3 rounded-xl bg-blue-50 px-4 py-3.5 text-xs font-bold leading-relaxed text-blue-700"><Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><p>أضف المحتوى الذي تريد أن يظهر للطالب في هذا الدرس<br /><span className="font-semibold text-blue-600">يمكنك إضافة أكثر من فيديو وأكثر من ملف PDF لكل درس</span></p></div>
 
-                    {/* Video URL field */}
-                    <div className="mt-4 rounded-xl border border-secondary-100 p-4">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary-50"><PlaySquare className="h-5 w-5 text-secondary" aria-hidden="true" /></span>
-                        <div className="min-w-0 flex-1"><p className="text-xs font-extrabold text-primary">فيديو</p><p className="mt-1 text-[11px] font-semibold text-muted">رابط الفيديو (اختياري)</p></div>
+                    {resourceError && <div className="mt-3 rounded-xl bg-red-50 px-4 py-2.5 text-xs font-bold text-red-700">{resourceError}</div>}
+
+                    {/* Videos section */}
+                    <div className="mt-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <PlaySquare className="h-4 w-4 text-secondary" aria-hidden="true" />
+                          <span className="text-xs font-extrabold text-primary">الفيديوهات</span>
+                          {videoDrafts.length > 0 && <span className="text-[10px] font-bold text-muted">{videoDrafts.length}</span>}
+                        </div>
+                        <button type="button" onClick={() => addDraftRow('video')} className="inline-flex items-center gap-1 rounded-lg bg-secondary-50 px-2.5 py-1.5 text-[11px] font-extrabold text-secondary transition hover:bg-secondary-100"><Plus className="h-3.5 w-3.5" />فيديو</button>
                       </div>
-                      <input type="url" dir="ltr" value={videoUrl} onChange={(e) => { setVideoUrl(e.target.value); setContentSaved(false); }} placeholder="https://..." className={`${INPUT_CLASS} mt-3 text-left`} />
+                      <div className="flex flex-col gap-2">
+                        {videoDrafts.length === 0 ? (
+                          <p className="rounded-xl border border-dashed border-secondary-200 px-4 py-3 text-center text-[11px] font-bold text-muted">لا توجد فيديوهات. اضغط «فيديو» للإضافة.</p>
+                        ) : videoDrafts.map((draft) => {
+                          const index = drafts.indexOf(draft);
+                          return (
+                            <ResourceRow
+                              key={index}
+                              draft={draft}
+                              icon={<PlaySquare className="h-4 w-4 text-secondary" aria-hidden="true" />}
+                              iconClass="bg-secondary-50"
+                              onTitleChange={(val) => updateDraft(index, { title: val })}
+                              onUrlChange={(val) => updateDraft(index, { url: val })}
+                              onSave={() => saveDraft(index)}
+                              onDelete={() => deleteDraft(index)}
+                            />
+                          );
+                        })}
+                      </div>
                     </div>
 
-                    {/* PDF URL field */}
-                    <div className="mt-3 rounded-xl border border-secondary-100 p-4">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50"><FileText className="h-5 w-5 text-red-500" aria-hidden="true" /></span>
-                        <div className="min-w-0 flex-1"><p className="text-xs font-extrabold text-primary">PDF</p><p className="mt-1 text-[11px] font-semibold text-muted">رابط ملف PDF (اختياري)</p></div>
+                    {/* PDFs section */}
+                    <div className="mt-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-red-500" aria-hidden="true" />
+                          <span className="text-xs font-extrabold text-primary">المذكرات (PDF)</span>
+                          {pdfDrafts.length > 0 && <span className="text-[10px] font-bold text-muted">{pdfDrafts.length}</span>}
+                        </div>
+                        <button type="button" onClick={() => addDraftRow('pdf')} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-[11px] font-extrabold text-red-600 transition hover:bg-red-100"><Plus className="h-3.5 w-3.5" />PDF</button>
                       </div>
-                      <input type="url" dir="ltr" value={pdfUrl} onChange={(e) => { setPdfUrl(e.target.value); setContentSaved(false); }} placeholder="https://..." className={`${INPUT_CLASS} mt-3 text-left`} />
+                      <div className="flex flex-col gap-2">
+                        {pdfDrafts.length === 0 ? (
+                          <p className="rounded-xl border border-dashed border-red-200 px-4 py-3 text-center text-[11px] font-bold text-muted">لا توجد مذكرات. اضغط «PDF» للإضافة.</p>
+                        ) : pdfDrafts.map((draft) => {
+                          const index = drafts.indexOf(draft);
+                          return (
+                            <ResourceRow
+                              key={index}
+                              draft={draft}
+                              icon={<FileText className="h-4 w-4 text-red-500" aria-hidden="true" />}
+                              iconClass="bg-red-50"
+                              onTitleChange={(val) => updateDraft(index, { title: val })}
+                              onUrlChange={(val) => updateDraft(index, { url: val })}
+                              onSave={() => saveDraft(index)}
+                              onDelete={() => deleteDraft(index)}
+                            />
+                          );
+                        })}
+                      </div>
                     </div>
 
                     {/* Placeholder action rows (quiz + homework — not implemented) */}
-                    <div className="mt-3 flex flex-col gap-3">
+                    <div className="mt-5 flex flex-col gap-3">
                       <div className="flex items-center gap-3 rounded-xl border border-secondary-100 px-3 py-3 opacity-60">
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50"><ClipboardCheck className="h-5 w-5 text-emerald-600" aria-hidden="true" /></span>
                         <div className="min-w-0 flex-1"><p className="text-xs font-extrabold text-primary">تقييم</p><p className="mt-1 truncate text-[11px] font-semibold text-muted">سيُضاف لاحقًا</p></div>
@@ -367,15 +512,7 @@ export function AdminContentPage() {
                       </div>
                     </div>
 
-                    <div className="mt-5 flex items-center justify-end gap-3">
-                      {contentSaved && <span className="text-xs font-bold text-emerald-600">تم الحفظ</span>}
-                      <button type="button" onClick={handleSaveContent} disabled={contentSaving} className="inline-flex items-center gap-1.5 rounded-xl bg-secondary px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-secondary-700 disabled:opacity-60">
-                        {contentSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="h-4 w-4" aria-hidden="true" />}
-                        حفظ المحتوى
-                      </button>
-                    </div>
-
-                    <div className="mt-5 flex items-start gap-3 rounded-xl bg-amber-50 px-4 py-3.5 text-xs font-bold leading-relaxed text-amber-800"><Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" /><p><span className="font-extrabold">ملاحظة</span><br /><span className="font-semibold">يمكنك ترك أي نوع من المحتوى فارغاً، سيظهر للطالب فقط ما تم نشره.</span></p></div>
+                    <div className="mt-5 flex items-start gap-3 rounded-xl bg-amber-50 px-4 py-3.5 text-xs font-bold leading-relaxed text-amber-800"><Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" /><p><span className="font-extrabold">ملاحظة</span><br /><span className="font-semibold">كل فيديو أو ملف يتم حفظه على حدة. سيظهر للطالب فقط ما تم حفظه.</span></p></div>
                   </div>
                 </>
               ) : (
@@ -434,5 +571,66 @@ export function AdminContentPage() {
         </div>
       </Modal>
     </AdminLayout>
+  );
+}
+
+function ResourceRow({
+  draft,
+  icon,
+  iconClass,
+  onTitleChange,
+  onUrlChange,
+  onSave,
+  onDelete,
+}: {
+  draft: ResourceDraft;
+  icon: React.ReactNode;
+  iconClass: string;
+  onTitleChange: (val: string) => void;
+  onUrlChange: (val: string) => void;
+  onSave: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="rounded-xl border border-secondary-100 p-3">
+      <div className="flex items-center gap-2">
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconClass}`}>{icon}</span>
+        <input
+          type="text"
+          value={draft.title}
+          onChange={(e) => onTitleChange(e.target.value)}
+          placeholder="العنوان"
+          className={`${INPUT_CLASS} text-xs`}
+        />
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={draft.saving}
+          className="shrink-0 rounded-lg p-2 text-red-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+          aria-label="حذف"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <input
+          type="url"
+          dir="ltr"
+          value={draft.url}
+          onChange={(e) => onUrlChange(e.target.value)}
+          placeholder="https://..."
+          className={`${INPUT_CLASS} text-left text-xs`}
+        />
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={draft.saving || !draft.dirty}
+          className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-secondary px-3 py-2 text-[11px] font-extrabold text-white transition hover:bg-secondary-700 disabled:opacity-50"
+        >
+          {draft.saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+          حفظ
+        </button>
+      </div>
+    </div>
   );
 }

@@ -3,8 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Bell, BarChart3, BookOpen, CheckCircle2, ChevronDown, ChevronLeft, ClipboardCheck, FileDown, FileText, Headphones, Home, Loader2, LogOut, Menu, MessageCircle, PlayCircle, Settings, Sparkles, CircleUser as UserCircle, X } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 import { VideoPlayer } from '../components/ui/VideoPlayer';
+import { PdfViewer } from '../components/ui/PdfViewer';
 import { fetchLatestSubscriptionRequest, getPackageDetails, isDashboardEligible, type StudentPackageDetails, type StudentSubscriptionRequest, type SubscriptionRequestStatus } from '../lib/subscriptionApi';
-import { fetchUnitsWithLessons, type ContentLesson, type UnitWithLessons } from '../lib/contentApi';
+import { fetchUnitsWithLessons, type ContentLesson, type LessonResource, type UnitWithLessons } from '../lib/contentApi';
 
 const STATUS_LABEL: Record<SubscriptionRequestStatus, string> = {
   pending: 'قيد المراجعة',
@@ -244,10 +245,49 @@ function LessonAccordion({ lesson, open, onToggle }: { lesson: LessonItem; open:
   return <div className="overflow-hidden rounded-2xl border border-[#e7e3f3] bg-white"><button type="button" onClick={onToggle} className={`flex w-full items-center justify-between gap-3 px-4 py-3.5 text-right transition ${open ? 'bg-[#f4efff]' : 'hover:bg-[#fbfaff]'}`}><span className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#7040db] text-white"><BookOpen className="h-4 w-4" /></span><span className="text-sm font-extrabold text-[#282263]">الدرس {lesson.lesson_order}: {lesson.title}</span></span>{open ? <ChevronDown className="h-4 w-4 text-[#7040db]" /> : <ChevronLeft className="h-4 w-4 text-[#8c88a6]" />}</button>{open && <LessonContent lesson={lesson} />}</div>;
 }
 
+interface DisplayResource {
+  id: string;
+  type: 'video' | 'pdf';
+  title: string;
+  url: string;
+}
+
+function buildResources(lesson: LessonItem): DisplayResource[] {
+  const resources: DisplayResource[] = [];
+  const seen = new Set<string>();
+
+  for (const r of lesson.lesson_resources ?? []) {
+    const key = `${r.resource_type}:${r.url}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      resources.push({ id: r.id, type: r.resource_type, title: r.title, url: r.url });
+    }
+  }
+
+  if (lesson.video_url && !seen.has(`video:${lesson.video_url}`)) {
+    resources.unshift({ id: 'legacy-video', type: 'video', title: 'فيديو الشرح', url: lesson.video_url });
+  }
+  if (lesson.pdf_url && !seen.has(`pdf:${lesson.pdf_url}`)) {
+    const videoIdx = resources.findIndex((r) => r.type === 'video');
+    resources.splice(videoIdx + 1, 0, { id: 'legacy-pdf', type: 'pdf', title: 'مذكرة الدرس', url: lesson.pdf_url });
+  }
+
+  return resources;
+}
+
 function LessonContent({ lesson }: { lesson: LessonItem }) {
-  const [videoOpen, setVideoOpen] = useState(false);
-  const [pdfOpen, setPdfOpen] = useState(false);
-  return <div className="border-t border-[#eeeaf8] px-4 py-2">{lesson.video_url && <><LessonAction icon={<PlayCircle />} iconClass="bg-[#f0e8ff] text-[#6d3dda]" title="فيديو الشرح" subtitle="شرح الدرس بالفيديو" action={videoOpen ? 'إخفاء' : 'مشاهدة'} actionClass="bg-[#f0e8ff] text-[#6c39d0]" onAction={() => setVideoOpen((v) => !v)} />{videoOpen && <VideoPlayer videoUrl={lesson.video_url} title={`الدرس ${lesson.lesson_order}: ${lesson.title}`} onClose={() => setVideoOpen(false)} />}</>}{lesson.pdf_url && <LessonAction icon={<FileDown />} iconClass="bg-[#eaf9ed] text-[#27a454]" title="مذكرة الدرس" subtitle="ملف PDF" action={pdfOpen ? 'إخفاء' : 'عرض المذكرة'} actionClass="bg-[#e8f9ec] text-[#249e4b]" onAction={() => setPdfOpen((v) => !v)} />}{pdfOpen && lesson.pdf_url && <iframe src={lesson.pdf_url} className="mt-2 h-[480px] w-full rounded-2xl border border-[#eeeaf8]" title="مذكرة الدرس" />}{!lesson.video_url && !lesson.pdf_url && <div className="flex items-center justify-center gap-2 py-5 text-xs font-bold text-[#9691ad]">لا يوجد محتوى منشور لهذا الدرس بعد</div>}</div>;
+  const [openId, setOpenId] = useState<string | null>(null);
+  const resources = buildResources(lesson);
+
+  if (resources.length === 0) {
+    return <div className="flex items-center justify-center gap-2 py-5 text-xs font-bold text-[#9691ad]">لا يوجد محتوى منشور لهذا الدرس بعد</div>;
+  }
+
+  return <div className="border-t border-[#eeeaf8] px-4 py-2">{resources.map((res) => {
+    const isOpen = openId === res.id;
+    const isVideo = res.type === 'video';
+    return <div key={res.id}><LessonAction icon={isVideo ? <PlayCircle /> : <FileDown />} iconClass={isVideo ? 'bg-[#f0e8ff] text-[#6d3dda]' : 'bg-[#eaf9ed] text-[#27a454]'} title={res.title} subtitle={isVideo ? 'شرح بالفيديو' : 'ملف PDF'} action={isOpen ? 'إخفاء' : (isVideo ? 'مشاهدة' : 'عرض المذكرة')} actionClass={isVideo ? 'bg-[#f0e8ff] text-[#6c39d0]' : 'bg-[#e8f9ec] text-[#249e4b]'} onAction={() => setOpenId(isOpen ? null : res.id)} />{isOpen && (isVideo ? <VideoPlayer videoUrl={res.url} title={`الدرس ${lesson.lesson_order}: ${lesson.title} — ${res.title}`} onClose={() => setOpenId(null)} /> : <PdfViewer pdfUrl={res.url} title={`الدرس ${lesson.lesson_order}: ${lesson.title} — ${res.title}`} onClose={() => setOpenId(null)} />)}</div>;
+  })}</div>;
 }
 
 function LessonAction({ icon, iconClass, title, subtitle, action, actionClass, onAction }: { icon: ReactNode; iconClass: string; title: string; subtitle: string; action: string; actionClass: string; onAction?: () => void }) {
