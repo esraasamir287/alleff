@@ -107,6 +107,3 @@ export function parsePdfUrl(url: string): PdfEmbed {
     return { kind: 'unknown', embedUrl: null };
   }
 }
-
-
-export { parsePdfUrl }
