@@ -108,3 +108,13 @@ export interface QuizReviewResult {
 export async function getQuizReview(attemptId: string): Promise<QuizReviewResult> {
   return callQuizFunction<QuizReviewResult>('quiz-review', { attemptId });
 }
+
+export async function getSubmittedAttemptCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from('exam_attempts')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'submitted');
+
+  if (error) return 0;
+  return count ?? 0;
+}

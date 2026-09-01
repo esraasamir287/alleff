@@ -6,6 +6,7 @@ import { VideoPlayer } from '../components/ui/VideoPlayer';
 import { PdfViewer } from '../components/ui/PdfViewer';
 import { fetchLatestSubscriptionRequest, getPackageDetails, isDashboardEligible, type StudentPackageDetails, type StudentSubscriptionRequest, type SubscriptionRequestStatus } from '../lib/subscriptionApi';
 import { fetchUnitsWithLessons, type ContentLesson, type LessonResource, type UnitWithLessons } from '../lib/contentApi';
+import { getSubmittedAttemptCount } from '../lib/quizApi';
 
 const STATUS_LABEL: Record<SubscriptionRequestStatus, string> = {
   pending: 'قيد المراجعة',
@@ -28,6 +29,7 @@ export function StudentDashboardPage() {
   const navigate = useNavigate();
   const [request, setRequest] = useState<StudentSubscriptionRequest | null>(null);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [attemptCount, setAttemptCount] = useState(0);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,12 +41,14 @@ export function StudentDashboardPage() {
     setFetching(true);
     setError(null);
     try {
-      const [req, unitsData] = await Promise.all([
+      const [req, unitsData, attempts] = await Promise.all([
         fetchLatestSubscriptionRequest(user.id),
         fetchUnitsWithLessons(),
+        getSubmittedAttemptCount(),
       ]);
       setRequest(req);
       setUnits(unitsData);
+      setAttemptCount(attempts);
     } catch {
       setError('تعذّر تحميل بياناتك. حاول مرة أخرى.');
     } finally {
@@ -88,6 +92,7 @@ export function StudentDashboardPage() {
         status={request!.status}
         userName={profile?.fullName}
         units={units}
+        attemptCount={attemptCount}
         error={error}
         onRetry={load}
       />
@@ -187,11 +192,13 @@ function Sidebar({ userName, onLogout, onNavigate }: { userName?: string | null;
   );
 }
 
-function DashboardContent({ packageDetails, status, userName, units, error, onRetry }: { packageDetails: StudentPackageDetails; status: SubscriptionRequestStatus; userName?: string | null; units: Unit[]; error: string | null; onRetry: () => void }) {
+function DashboardContent({ packageDetails, status, userName, units, attemptCount, error, onRetry }: { packageDetails: StudentPackageDetails; status: SubscriptionRequestStatus; userName?: string | null; units: Unit[]; attemptCount: number; error: string | null; onRetry: () => void }) {
   const [activeUnit, setActiveUnit] = useState(0);
   const [openLesson, setOpenLesson] = useState<string | null>(null);
   const unit = units[activeUnit];
   const firstName = userName?.trim().split(' ')[0] || 'صديقي';
+
+  const totalLessons = units.reduce((sum, u) => sum + u.lessons.length, 0);
 
   useEffect(() => {
     if (units.length > 0 && units[activeUnit]?.lessons[0]) {
@@ -219,10 +226,10 @@ function DashboardContent({ packageDetails, status, userName, units, error, onRe
       </section>
 
       <div className="mb-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={<BookOpen />} iconClass="bg-orange-50 text-orange-500" label="الدروس المكتملة" value="3" detail="من 12 درس" />
-        <StatCard icon={<CheckCircle2 />} iconClass="bg-emerald-50 text-emerald-500" label="الاختبارات" value="2" detail="اختبار" />
-        <StatCard icon={<FileText />} iconClass="bg-blue-50 text-blue-500" label="الواجبات" value="1" detail="مهمة" />
-        <StatCard icon={<BarChart3 />} iconClass="bg-violet-50 text-violet-500" label="نسبة التقدم" value="42%" detail="" progress />
+        <StatCard icon={<BookOpen />} iconClass="bg-orange-50 text-orange-500" label="الدروس" value={String(totalLessons)} detail={totalLessons === 1 ? 'درس واحد' : 'دروس متاحة'} />
+        <StatCard icon={<CheckCircle2 />} iconClass="bg-emerald-50 text-emerald-500" label="الاختبارات" value={String(attemptCount)} detail={attemptCount === 1 ? 'اختبار مُكتمل' : 'اختبار مُكتمل'} />
+        <StatCard icon={<FileText />} iconClass="bg-blue-50 text-blue-500" label="الواجبات" value="0" detail="لا توجد مهام حالياً" />
+        <StatCard icon={<BarChart3 />} iconClass="bg-violet-50 text-violet-500" label="نسبة التقدم" value="0%" detail="ابدأ أول درس" progress />
       </div>
 
       <section className="rounded-3xl border border-[#e9e6f5] bg-white shadow-[0_8px_30px_rgba(73,52,145,0.04)]">
@@ -238,7 +245,8 @@ function DashboardContent({ packageDetails, status, userName, units, error, onRe
 }
 
 function StatCard({ icon, iconClass, label, value, detail, progress }: { icon: ReactNode; iconClass: string; label: string; value: string; detail: string; progress?: boolean }) {
-  return <div className="rounded-2xl border border-[#e9e6f5] bg-white p-4 shadow-[0_5px_20px_rgba(73,52,145,0.03)]"><div className="flex items-start justify-between gap-2"><div><p className="text-[11px] font-bold text-[#8d89a5]">{label}</p><p className="mt-2 text-2xl font-black text-[#191650]">{value}</p><p className="mt-1 text-[11px] font-bold text-[#aaa6ba]">{detail}</p></div><span className={`flex h-9 w-9 items-center justify-center rounded-full ${iconClass}`}>{icon}</span></div>{progress && <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#ebe8f4]"><div className="h-full w-[42%] rounded-full bg-[#7441e4]" /></div>}</div>;
+  const pct = parseInt(value, 10) || 0;
+  return <div className="rounded-2xl border border-[#e9e6f5] bg-white p-4 shadow-[0_5px_20px_rgba(73,52,145,0.03)]"><div className="flex items-start justify-between gap-2"><div><p className="text-[11px] font-bold text-[#8d89a5]">{label}</p><p className="mt-2 text-2xl font-black text-[#191650]">{value}</p><p className="mt-1 text-[11px] font-bold text-[#aaa6ba]">{detail}</p></div><span className={`flex h-9 w-9 items-center justify-center rounded-full ${iconClass}`}>{icon}</span></div>{progress && <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#ebe8f4]"><div className="h-full rounded-full bg-[#7441e4] transition-all" style={{ width: `${pct}%` }} /></div>}</div>;
 }
 
 function LessonAccordion({ lesson, open, onToggle }: { lesson: LessonItem; open: boolean; onToggle: () => void }) {
