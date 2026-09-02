@@ -348,3 +348,55 @@ export async function deleteLessonHomework(lessonId: string): Promise<void> {
     .eq('lesson_id', lessonId);
   if (error) throw error;
 }
+
+/* ---- Homework Submissions ---- */
+
+export interface HomeworkSubmission {
+  id: string;
+  homework_id: string;
+  student_id: string;
+  file_url: string;
+  file_path: string;
+  submitted_at: string;
+}
+
+export async function submitHomework(
+  homeworkId: string,
+  files: File[],
+): Promise<HomeworkSubmission[]> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) throw new Error('Must be signed in to submit homework.');
+  const studentId = userData.user.id;
+
+  const records: HomeworkSubmission[] = [];
+
+  for (const file of files) {
+    const ext = file.name.split('.').pop() ?? 'bin';
+    const filePath = `${studentId}/${homeworkId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('homework-submissions')
+      .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+    if (uploadError) throw uploadError;
+
+    const { data: publicUrlData } = supabase.storage
+      .from('homework-submissions')
+      .getPublicUrl(filePath);
+
+    const { data, error: insertError } = await supabase
+      .from('homework_submissions')
+      .insert({
+        homework_id: homeworkId,
+        file_url: publicUrlData.publicUrl,
+        file_path: filePath,
+      })
+      .select('id, homework_id, student_id, file_url, file_path, submitted_at')
+      .single();
+
+    if (insertError) throw insertError;
+    records.push(data);
+  }
+
+  return records;
+}

@@ -5,7 +5,7 @@ import { useAuth } from '../context/useAuth';
 import { VideoPlayer } from '../components/ui/VideoPlayer';
 import { PdfViewer } from '../components/ui/PdfViewer';
 import { fetchLatestSubscriptionRequest, getPackageDetails, isDashboardEligible, type StudentPackageDetails, type StudentSubscriptionRequest, type SubscriptionRequestStatus } from '../lib/subscriptionApi';
-import { fetchUnitsWithLessons, type ContentLesson, type LessonResource, type UnitWithLessons } from '../lib/contentApi';
+import { fetchUnitsWithLessons, submitHomework, type ContentLesson, type LessonResource, type UnitWithLessons } from '../lib/contentApi';
 import { getSubmittedAttemptCount } from '../lib/quizApi';
 
 const STATUS_LABEL: Record<SubscriptionRequestStatus, string> = {
@@ -295,20 +295,46 @@ function formatDueDate(dueDate: string | null): string {
 }
 
 function HomeworkView({ firstName, units }: { firstName: string; units: Unit[] }) {
-  const [selectedFiles, setSelectedFiles] = useState<{ name: string; size: string; type: 'image' | 'pdf' }[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const homeworkItems = collectHomework(units);
   const selected = homeworkItems.find((h) => h.id === selectedId) ?? homeworkItems[0] ?? null;
 
+  const filePreviews = pendingFiles.map((file) => ({
+    name: file.name,
+    size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+    type: file.type === 'application/pdf' ? 'pdf' as const : 'image' as const,
+  }));
+
   function handleFiles(files: FileList | null) {
     if (!files) return;
-    const nextFiles = Array.from(files).map((file) => ({
-      name: file.name,
-      size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-      type: file.type === 'application/pdf' ? 'pdf' as const : 'image' as const,
-    }));
-    setSelectedFiles((current) => [...current, ...nextFiles]);
+    setPendingFiles((current) => [...current, ...Array.from(files)]);
+    setSubmitError(null);
+    setSubmitSuccess(false);
+  }
+
+  function removeFile(index: number) {
+    setPendingFiles((current) => current.filter((_, i) => i !== index));
+  }
+
+  async function handleSubmit() {
+    if (!selected || pendingFiles.length === 0) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(false);
+    try {
+      await submitHomework(selected.id, pendingFiles);
+      setSubmitSuccess(true);
+      setPendingFiles([]);
+    } catch {
+      setSubmitError('تعذّر تسليم الواجب. حاول مرة أخرى.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -340,7 +366,7 @@ function HomeworkView({ firstName, units }: { firstName: string; units: Unit[] }
               lessonTitle={hw.lessonTitle}
               dueDate={formatDueDate(hw.due_date)}
               active={selected?.id === hw.id}
-              onClick={() => { setSelectedId(hw.id); setSelectedFiles([]); }}
+              onClick={() => { setSelectedId(hw.id); setPendingFiles([]); setSubmitError(null); setSubmitSuccess(false); }}
             />
           ))}
         </div>
@@ -367,11 +393,11 @@ function HomeworkView({ firstName, units }: { firstName: string; units: Unit[] }
               <h4 className="text-base font-black text-[#5534b8]">تعليمات الواجب</h4>
               <p className="mt-3 text-sm font-semibold leading-8 text-[#77739c]">{selected.instructions || 'لا توجد تعليمات إضافية.'}</p>
               <div className="mt-4 rounded-xl border border-[#dfd0ff] bg-[#faf7ff] px-4 py-3 text-xs font-extrabold leading-6 text-[#6840d4]"><Sparkles className="ml-1 inline h-4 w-4" />شدّي حيلك، ارفع واجبك قبل الموعد!</div>
-              <h4 className="mt-5 text-sm font-black text-[#5534b8]">الملفات المرفقة ({selectedFiles.length})</h4>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">{selectedFiles.map((file, index) => <div key={`${file.name}-${index}`} className="relative rounded-xl border border-[#e7e0f7] bg-white p-2 text-center"><button type="button" onClick={() => setSelectedFiles((current) => current.filter((_, fileIndex) => fileIndex !== index))} className="absolute left-1.5 top-1.5 rounded-full bg-[#f4efff] p-1 text-[#8a75c9] hover:bg-red-50 hover:text-red-500"><X className="h-3 w-3" /></button><span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-lg ${file.type === 'pdf' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{file.type === 'pdf' ? <FileText className="h-6 w-6" /> : <ImagePlus className="h-6 w-6" />}</span><p className="mt-2 truncate text-[10px] font-extrabold text-[#4b4676]">{file.name}</p><p className="mt-1 text-[10px] font-bold text-[#aaa6ba]">{file.size}</p></div>)}</div>
+              <h4 className="mt-5 text-sm font-black text-[#5534b8]">الملفات المرفقة ({filePreviews.length})</h4>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">{filePreviews.map((file, index) => <div key={`${file.name}-${index}`} className="relative rounded-xl border border-[#e7e0f7] bg-white p-2 text-center"><button type="button" onClick={() => removeFile(index)} className="absolute left-1.5 top-1.5 rounded-full bg-[#f4efff] p-1 text-[#8a75c9] hover:bg-red-50 hover:text-red-500"><X className="h-3 w-3" /></button><span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-lg ${file.type === 'pdf' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>{file.type === 'pdf' ? <FileText className="h-6 w-6" /> : <ImagePlus className="h-6 w-6" />}</span><p className="mt-2 truncate text-[10px] font-extrabold text-[#4b4676]">{file.name}</p><p className="mt-1 text-[10px] font-bold text-[#aaa6ba]">{file.size}</p></div>)}</div>
             </div>
           </div>
-          <div className="flex flex-col-reverse gap-3 border-t border-[#eeebf8] px-5 py-5 sm:flex-row sm:items-center sm:justify-start sm:px-7"><button type="button" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#6840d4] px-6 py-3 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(104,64,212,0.2)] transition hover:bg-[#5831c1]"><Send className="h-4 w-4" />تسليم الواجب</button><button type="button" onClick={() => setSelectedFiles([])} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#b9a3ff] bg-white px-5 py-3 text-sm font-extrabold text-[#6840d4] transition hover:bg-[#faf7ff]"><FileDown className="h-4 w-4" />حفظ كمسودة</button></div>
+          <div className="flex flex-col-reverse gap-3 border-t border-[#eeebf8] px-5 py-5 sm:flex-row sm:items-center sm:justify-start sm:px-7">{submitSuccess && <span className="inline-flex items-center gap-2 text-sm font-extrabold text-emerald-600"><CheckCircle2 className="h-4 w-4" />تم تسليم الواجب بنجاح!</span>}{submitError && <span className="text-sm font-extrabold text-red-600">{submitError}</span>}<button type="button" onClick={handleSubmit} disabled={submitting || pendingFiles.length === 0} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#6840d4] px-6 py-3 text-sm font-extrabold text-white shadow-[0_8px_18px_rgba(104,64,212,0.2)] transition hover:bg-[#5831c1] disabled:cursor-not-allowed disabled:opacity-50">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{submitting ? 'جاري التسليم...' : 'تسليم الواجب'}</button><button type="button" onClick={() => { setPendingFiles([]); setSubmitError(null); setSubmitSuccess(false); }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#b9a3ff] bg-white px-5 py-3 text-sm font-extrabold text-[#6840d4] transition hover:bg-[#faf7ff]"><FileDown className="h-4 w-4" />حذف الملفات</button></div>
         </section>
       )}
     </div>
