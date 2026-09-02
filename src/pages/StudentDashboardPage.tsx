@@ -267,7 +267,7 @@ function collectHomework(units: Unit[]): HomeworkItem[] {
   const items: HomeworkItem[] = [];
   for (const unit of units) {
     for (const lesson of unit.lessons) {
-      const hw = lesson.lesson_homework;
+      const hw = Array.isArray(lesson.lesson_homework) ? lesson.lesson_homework[0] : lesson.lesson_homework;
       if (hw) {
         items.push({
           id: hw.id,

@@ -47,7 +47,7 @@ export interface ContentLesson {
   pdf_url: string | null;
   created_at: string;
   lesson_resources?: LessonResource[];
-  lesson_homework?: LessonHomework | null;
+  lesson_homework?: LessonHomework | LessonHomework[] | null;
 }
 
 export interface LessonWithCount extends ContentUnit {
