@@ -32,7 +32,7 @@ export function StudentDashboardPage() {
   const [attemptCount, setAttemptCount] = useState(0);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<'dashboard' | 'homework'>('dashboard');
+  const [activeView, setActiveView] = useState<'dashboard' | 'homework' | 'notifications'>('dashboard');
 
   const load = useCallback(async () => {
     if (!user) {
@@ -112,8 +112,8 @@ function DashboardFrame({
   children: ReactNode;
   onLogout?: () => void;
   userName?: string | null;
-  activeView?: 'dashboard' | 'homework';
-  onSelectView?: (view: 'dashboard' | 'homework') => void;
+  activeView?: 'dashboard' | 'homework' | 'notifications';
+  onSelectView?: (view: 'dashboard' | 'homework' | 'notifications') => void;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
@@ -151,7 +151,7 @@ function DashboardFrame({
   );
 }
 
-function Sidebar({ userName, onLogout, onNavigate, activeView, onSelectView }: { userName?: string | null; onLogout?: () => void; onNavigate?: () => void; activeView: 'dashboard' | 'homework'; onSelectView: (view: 'dashboard' | 'homework') => void }) {
+function Sidebar({ userName, onLogout, onNavigate, activeView, onSelectView }: { userName?: string | null; onLogout?: () => void; onNavigate?: () => void; activeView: 'dashboard' | 'homework' | 'notifications'; onSelectView: (view: 'dashboard' | 'homework' | 'notifications') => void }) {
   const mainItems = [
     { label: 'لوحة التحكم', icon: Home, view: 'dashboard' as const },
     { label: 'دروسي', icon: BookOpen, view: 'dashboard' as const },
@@ -176,12 +176,15 @@ function Sidebar({ userName, onLogout, onNavigate, activeView, onSelectView }: {
           </button>
         ))}
         <div className="my-5 border-t border-[#ebe8f6]" />
-        {secondaryItems.map(({ label, icon: Icon }) => (
-          <button key={label} type="button" onClick={onNavigate} className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-[#595681] transition hover:bg-[#faf8ff] hover:text-[#5834c6]">
-            <Icon className="h-5 w-5" />
-            {label}
-          </button>
-        ))}
+        {secondaryItems.map(({ label, icon: Icon }) => {
+          const isNotifications = label === 'الإشعارات';
+          return (
+            <button key={label} type="button" onClick={() => { if (isNotifications) onSelectView('notifications'); onNavigate?.(); }} className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${isNotifications && activeView === 'notifications' ? 'bg-[#f0ebff] text-[#5834c6]' : 'text-[#595681] hover:bg-[#faf8ff] hover:text-[#5834c6]'}`}>
+              <Icon className="h-5 w-5" />
+              {label}
+            </button>
+          );
+        })}
       </nav>
       <div className="mt-7 rounded-2xl border border-[#e9e1ff] bg-[#fbf8ff] p-4 text-center">
         <Headphones className="mx-auto h-7 w-7 text-[#6648d2]" />
@@ -197,7 +200,7 @@ function Sidebar({ userName, onLogout, onNavigate, activeView, onSelectView }: {
   );
 }
 
-function DashboardContent({ activeView, packageDetails, status, userName, units, attemptCount, error, onRetry }: { activeView: 'dashboard' | 'homework'; packageDetails: StudentPackageDetails; status: SubscriptionRequestStatus; userName?: string | null; units: Unit[]; attemptCount: number; error: string | null; onRetry: () => void }) {
+function DashboardContent({ activeView, packageDetails, status, userName, units, attemptCount, error, onRetry }: { activeView: 'dashboard' | 'homework' | 'notifications'; packageDetails: StudentPackageDetails; status: SubscriptionRequestStatus; userName?: string | null; units: Unit[]; attemptCount: number; error: string | null; onRetry: () => void }) {
   const [activeUnit, setActiveUnit] = useState(0);
   const [openLesson, setOpenLesson] = useState<string | null>(null);
   const unit = units[activeUnit];
@@ -215,6 +218,10 @@ function DashboardContent({ activeView, packageDetails, status, userName, units,
 
   if (activeView === 'homework') {
     return <HomeworkView firstName={firstName} units={units} />;
+  }
+
+  if (activeView === 'notifications') {
+    return <NotificationsView />;
   }
 
   return (
@@ -292,6 +299,56 @@ function formatDueDate(dueDate: string | null): string {
   } catch {
     return dueDate;
   }
+}
+
+function NotificationsView() {
+  return (
+    <div className="mx-auto max-w-5xl text-right">
+      <section className="mb-8">
+        <p className="text-sm font-bold text-[#7c78a2]">كل ما يخص محاضراتك وتحديثات المهمة</p>
+        <h1 className="mt-1 text-3xl font-black tracking-tight text-[#17154f] sm:text-4xl">الإشعارات</h1>
+      </section>
+
+      <div className="space-y-5">
+        <article className="overflow-hidden rounded-3xl border border-[#e2d3ff] bg-gradient-to-br from-white via-[#fcfaff] to-[#f7f0ff] p-5 shadow-[0_10px_35px_rgba(104,64,212,0.06)] sm:p-8">
+          <div className="flex flex-col gap-7 lg:flex-row-reverse lg:items-center lg:gap-10">
+            <div className="flex shrink-0 justify-center lg:w-64">
+              <div className="relative flex h-44 w-44 items-center justify-center rounded-full bg-[#f1e9ff]">
+                <CalendarDays className="h-24 w-24 text-[#7040db]" strokeWidth={1.5} />
+                <span className="absolute bottom-4 left-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#7040db] text-white shadow-lg"><Bell className="h-6 w-6" /></span>
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#eee4ff] px-4 py-2 text-xs font-black text-[#7040db]"><CalendarDays className="h-4 w-4" />تذكير محاضرة تفاعلية</span>
+              <h2 className="mt-5 text-2xl font-black leading-tight text-[#17154f] sm:text-3xl">معاد المحاضرة التفاعلية الجاية<br className="hidden sm:block" /> يوم 12-9</h2>
+              <p className="mt-4 text-base font-semibold leading-8 text-[#77739c]">استعدي للمحاضرة التفاعلية القادمة.</p>
+              <div className="mt-5 flex items-start gap-3 rounded-2xl border border-[#eadcff] bg-[#faf7ff] px-4 py-4 text-sm font-bold leading-7 text-[#413875]">
+                <MessageCircle className="mt-1 h-5 w-5 shrink-0 text-[#7040db]" />
+                <p>سيتم إرسال رابط المحاضرة على واتساب<br />وسيظهر هنا قبل المحاضرة بيوم</p>
+              </div>
+              <div className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-dashed border-[#cdb1ff] bg-white/80 px-4 py-4 text-sm font-black leading-7 text-[#211b60]">
+                <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#eee4ff] text-[#7040db]">↗</span>
+                <div><p>ورابط المحاضرة سيظهر هنا عند موعد المحاضرة</p><p className="mt-1 font-semibold text-[#8a85a5]">تابعي الإشعارات لتصلك التفاصيل والرابط.</p></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article className="overflow-hidden rounded-3xl border border-[#cfe0ff] bg-gradient-to-br from-white via-[#f8fbff] to-[#eef5ff] p-5 shadow-[0_10px_35px_rgba(48,105,206,0.06)] sm:p-8">
+          <div className="flex flex-col-reverse items-center gap-6 text-center lg:flex-row lg:justify-between lg:text-right">
+            <div className="flex h-36 w-44 items-center justify-center rounded-[42%] bg-[#e4efff] text-[#3477dc]">
+              <MessageCircle className="h-24 w-24" strokeWidth={1.5} />
+            </div>
+            <div className="flex-1">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#e4efff] px-4 py-2 text-xs font-black text-[#3477dc]"><Sparkles className="h-4 w-4" />قريبًا</span>
+              <h2 className="mt-4 text-2xl font-black leading-tight text-[#163e83] sm:text-3xl">شات بوت ذكي للطلاب!</h2>
+              <p className="mt-4 text-base font-semibold leading-8 text-[#66779a]">قريبًا هيبقى متاح للطلبة<br />يقدر الطالب يسأله ويجاوب على أي سؤال في أي وقت<br />كأنه مدرس معاه في البيت</p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  );
 }
 
 function HomeworkView({ firstName, units }: { firstName: string; units: Unit[] }) {
