@@ -321,7 +321,7 @@ function NotificationsView() {
             <div className="min-w-0 flex-1">
               <span className="inline-flex items-center gap-2 rounded-full bg-[#eee4ff] px-4 py-2 text-xs font-black text-[#7040db]"><CalendarDays className="h-4 w-4" />تذكير محاضرة تفاعلية</span>
               <h2 className="mt-5 text-2xl font-black leading-tight text-[#17154f] sm:text-3xl">معاد المحاضرة التفاعلية الجاية<br className="hidden sm:block" /> يوم 12-9</h2>
-              <p className="mt-4 text-base font-semibold leading-8 text-[#77739c]">استعدي للمحاضرة التفاعلية القادمة.</p>
+              <p className="mt-4 text-base font-semibold leading-8 text-[#77739c]">استعد للمحاضرة التفاعلية القادمة.</p>
               <div className="mt-5 flex items-start gap-3 rounded-2xl border border-[#eadcff] bg-[#faf7ff] px-4 py-4 text-sm font-bold leading-7 text-[#413875]">
                 <MessageCircle className="mt-1 h-5 w-5 shrink-0 text-[#7040db]" />
                 <p>سيتم إرسال رابط المحاضرة على واتساب<br />وسيظهر هنا قبل المحاضرة بيوم</p>
