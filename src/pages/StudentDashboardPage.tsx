@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bell, BarChart3, BookOpen, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ClipboardCheck, Upload, FileDown, FileText, Headphones, Home, ImagePlus, Loader2, LogOut, Menu, MessageCircle, PlayCircle, Send, Settings, Sparkles, CircleUser as UserCircle, X } from 'lucide-react';
+import { ArrowLeft, Bell, BarChart3, BookOpen, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ClipboardCheck, Clock, Upload, FileDown, FileText, Headphones, Home, ImagePlus, Loader2, LogOut, Menu, MessageCircle, PlayCircle, Send, Settings, Sparkles, CircleUser as UserCircle, X } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 import { VideoPlayer } from '../components/ui/VideoPlayer';
 import { PdfViewer } from '../components/ui/PdfViewer';
-import { fetchLatestSubscriptionRequest, getPackageDetails, isDashboardEligible, type StudentPackageDetails, type StudentSubscriptionRequest, type SubscriptionRequestStatus } from '../lib/subscriptionApi';
+import { fetchLatestSubscriptionRequest, getPackageDetails, isDashboardEligible, isSubscriptionPending, type StudentPackageDetails, type StudentSubscriptionRequest, type SubscriptionRequestStatus } from '../lib/subscriptionApi';
 import { fetchUnitsWithLessons, fetchGradeIdForPackageGrade, submitHomework, type ContentLesson, type LessonResource, type UnitWithLessons } from '../lib/contentApi';
 import { getSubmittedAttemptCount } from '../lib/quizApi';
 
@@ -86,6 +86,21 @@ export function StudentDashboardPage() {
 
   if (!user) {
     return <DashboardFrame><EmptyState title="يجب تسجيل الدخول" text="سجّل الدخول للوصول إلى لوحة التحكم الخاصة بك." action="تسجيل الدخول" to="/login" /></DashboardFrame>;
+  }
+
+  if (isSubscriptionPending(request)) {
+    return (
+      <DashboardFrame onLogout={handleLogout} userName={profile?.fullName}>
+        <div className="mx-auto max-w-md text-center">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#fff4e0]">
+            <Clock className="h-10 w-10 text-[#f5a832]" />
+          </div>
+          <h1 className="text-2xl font-black text-[#17154f]">طلبك قيد المراجعة</h1>
+          <p className="mt-4 text-sm font-semibold leading-7 text-[#77739c]">تم استلام طلب اشتراكك وجارٍ مراجعته من قبل الإدارة. سيتم تفعيل لوحة التحكم الخاصة بك فور الموافقة.</p>
+          <p className="mt-3 text-xs font-bold text-[#aaa6ba]">يمكنك متابعة حالة الطلب لاحقًا من هنا.</p>
+        </div>
+      </DashboardFrame>
+    );
   }
 
   if (!isDashboardEligible(request)) {

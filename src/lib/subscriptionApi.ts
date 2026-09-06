@@ -53,8 +53,13 @@ export async function fetchLatestSubscriptionRequest(
 
 export function isDashboardEligible(request: StudentSubscriptionRequest | null): boolean {
   return Boolean(
-    request?.receiptPath.trim() &&
-      (request.status === 'pending' || request.status === 'approved'),
+    request?.receiptPath.trim() && request.status === 'approved',
+  );
+}
+
+export function isSubscriptionPending(request: StudentSubscriptionRequest | null): boolean {
+  return Boolean(
+    request?.receiptPath.trim() && request.status === 'pending',
   );
 }
 
