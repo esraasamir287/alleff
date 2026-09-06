@@ -89,6 +89,24 @@ export async function updateGrade(gradeId: string, fields: { title?: string; slu
   return data;
 }
 
+const PACKAGE_GRADE_ORDER: Record<string, number> = {
+  'الأولى': 1,
+  'الثانية': 2,
+  'الثالثة': 3,
+};
+
+export async function fetchGradeIdForPackageGrade(gradeLabel: string): Promise<string | null> {
+  const order = PACKAGE_GRADE_ORDER[gradeLabel];
+  if (!order) return null;
+  const { data, error } = await supabase
+    .from('grades')
+    .select('id')
+    .eq('grade_order', order)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
 export async function deleteGrade(gradeId: string): Promise<void> {
   const { error } = await supabase
     .from('grades')

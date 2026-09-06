@@ -5,7 +5,7 @@ import { useAuth } from '../context/useAuth';
 import { VideoPlayer } from '../components/ui/VideoPlayer';
 import { PdfViewer } from '../components/ui/PdfViewer';
 import { fetchLatestSubscriptionRequest, getPackageDetails, isDashboardEligible, type StudentPackageDetails, type StudentSubscriptionRequest, type SubscriptionRequestStatus } from '../lib/subscriptionApi';
-import { fetchUnitsWithLessons, submitHomework, type ContentLesson, type LessonResource, type UnitWithLessons } from '../lib/contentApi';
+import { fetchUnitsWithLessons, fetchGradeIdForPackageGrade, submitHomework, type ContentLesson, type LessonResource, type UnitWithLessons } from '../lib/contentApi';
 import { getSubmittedAttemptCount } from '../lib/quizApi';
 
 const STATUS_LABEL: Record<SubscriptionRequestStatus, string> = {
@@ -42,12 +42,19 @@ export function StudentDashboardPage() {
     setFetching(true);
     setError(null);
     try {
-      const [req, unitsData, attempts] = await Promise.all([
-        fetchLatestSubscriptionRequest(user.id),
-        fetchUnitsWithLessons(),
+      const req = await fetchLatestSubscriptionRequest(user.id);
+      setRequest(req);
+
+      let gradeId: string | undefined;
+      if (req) {
+        const details = getPackageDetails(req);
+        gradeId = (await fetchGradeIdForPackageGrade(details.grade)) ?? undefined;
+      }
+
+      const [unitsData, attempts] = await Promise.all([
+        fetchUnitsWithLessons(gradeId),
         getSubmittedAttemptCount(),
       ]);
-      setRequest(req);
       setUnits(unitsData);
       setAttemptCount(attempts);
     } catch {
