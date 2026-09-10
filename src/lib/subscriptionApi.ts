@@ -39,9 +39,23 @@ function rowToSubscription(row: Record<string, unknown>): StudentSubscriptionReq
 export async function fetchLatestSubscriptionRequest(
   userId: string,
 ): Promise<StudentSubscriptionRequest | null> {
+  const selectColumns = 'id, user_id, package_name, price, receipt_path, status, created_at';
+
+  const { data: approved, error: approvedError } = await supabase
+    .from('subscription_requests')
+    .select(selectColumns)
+    .eq('user_id', userId)
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (approvedError) throw approvedError;
+  if (approved) return rowToSubscription(approved as Record<string, unknown>);
+
   const { data, error } = await supabase
     .from('subscription_requests')
-    .select('id, user_id, package_name, price, receipt_path, status, created_at')
+    .select(selectColumns)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
