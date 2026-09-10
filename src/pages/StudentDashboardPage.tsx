@@ -350,7 +350,7 @@ function NotificationsView() {
               </div>
               <div className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-dashed border-[#cdb1ff] bg-white/80 px-4 py-4 text-sm font-black leading-7 text-[#211b60]">
                 <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#eee4ff] text-[#7040db]">↗</span>
-                <div><p>ورابط المحاضرة سيظهر هنا عند موعد المحاضرة</p><p className="mt-1 font-semibold text-[#8a85a5]">تابعي الإشعارات لتصلك التفاصيل والرابط.</p></div>
+                <div><p>ورابط المحاضرة سيظهر هنا عند موعد المحاضرة</p><p className="mt-1 font-semibold text-[#8a85a5]">https://us04web.zoom.us/j/78056719460?pwd=qSojLd3eKkA39j1ojWhaCiYaqHcPQN.1</p></div>
               </div>
             </div>
           </div>
